@@ -1,0 +1,466 @@
+'use client'
+
+import { NextPage } from 'next';
+import { useEffect, useState } from "react";
+import {
+    Form,
+    FormField,
+    FormItem,
+  } from "@/components/ui/form"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { getKPRKByRegional, getKabKota, getKpcByKcu, getKpcKoordinat, getPenyelenggara, getProvinsi, getRegional } from '../../../../../services';
+import { KPCKoordinat, KabKotaI, ProvinsiI } from '../../../../../services/types';
+import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import Combobox from '@/components/tools/combobox';
+import { FormCustomOption } from '../../../../../store/state';
+import { RegionalI } from '../../referensi/regional/columns';
+import { kcuI } from '../../referensi/kc-kcu/columns';
+import { ProfilKcpI } from '../../profilKCP/columns';
+import { QueryParams, buildQueryParam } from '../../../../../helper';
+import { ChevronsUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+const list_penyelenggara_2 = [
+    {value:'lpu', label:'LPU'},
+    {value:'lpk', label:'LPK'},
+    {value:'penyelenggara', label:'Penyelenggara POS Lainnya'},
+]
+const list_penyelenggara = [
+    {value:'1', label:'JNT'},
+    {value:'2', label:'Sicepat'},
+]
+const FormSchema = z.object({
+    tipe_penyelenggara: z.string().optional(),
+    id_penyelenggara: z.string().optional(),
+    id_provinsi: z.string().optional(),
+    id_kabupaten_kota: z.string().optional(),
+    id_regional: z.string().optional(),
+    id_kprk: z.string().optional(),
+    id_kpc: z.string().optional(),
+    // id_provinsi: z.string().optional(),
+    // id_kabupaten_kota: z.string().optional(),
+    // id_kelurahan: z.string().optional(),
+    // tahun: z.string().optional(),
+    // bulan: z.string().optional(),
+})
+
+type TipePenyelenggara = 'lpu' | 'lpk' | 'penyelenggara'; // Union type
+
+const MapsComp = dynamic(()=>import('./maps'),{
+    ssr: false
+})
+const Monitoring: NextPage = () => {
+    const form = useForm<z.infer<typeof FormSchema>>({
+        resolver: zodResolver(FormSchema),
+    })
+    const router = useRouter()
+    const [dataSource,setDataSource] = useState<Array<KPCKoordinat>>([])
+    const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [isKotaLoading, setIsKotaLoading] = useState<boolean>(false)
+    const [isKcuLoading, setIsKcuLoading] = useState<boolean>(false)
+    const [isKcpLoading, setIskcpLoading] = useState<boolean>(false)
+    const [provinsiOptions, setProvinsiOptions] = useState<Array<FormCustomOption>>([])
+    const [regionalOptions, setRegionalOptions] = useState<Array<FormCustomOption>>([])
+    const [kabKotaOptions, setKabKotaOptions] = useState<Array<FormCustomOption>>([])
+    const [penyelenggaraOptions, setPenyelenggaraOptions] = useState<Array<FormCustomOption>>([])
+    const [kcuOptions, setkcuOptions] = useState<Array<FormCustomOption>>([])
+    const [kcpOptions, setKcpOptions] = useState<Array<FormCustomOption>>([])
+    const [selectedTipePenyelenggara, setSelectedTipePenyelenggara] = useState<TipePenyelenggara>('lpu');
+    
+    const [isFilterHidden,setIsFilterHidden] = useState<boolean>(false)
+
+    // Filter mapping based on penyelenggara type
+    const filterOptionsMap: Record<TipePenyelenggara, string[]> = {
+        'lpu': ['provinsi', 'kabupaten/kota', 'regional', 'kprk', 'kpc'],
+        'lpk': ['penyelenggara', 'provinsi', 'kabupaten/kota', 'regional', 'kprk', 'kpc'],
+        'penyelenggara': ['penyelenggara', 'provinsi', 'kabupaten/kota'],
+    };
+
+    // Function to dynamically update penyelenggara options
+    const updatePenyelenggaraOptions = (type: string) => {
+        switch (type) {
+            case '1':
+                setPenyelenggaraOptions(list_penyelenggara); // Example for type '1'
+                break;
+            case '2':
+            case '3':
+                setPenyelenggaraOptions(list_penyelenggara_2); // Example for other types
+                break;
+            default:
+                setPenyelenggaraOptions([]);
+                break;
+        }
+    };
+
+    useEffect(() => {
+        updatePenyelenggaraOptions(selectedTipePenyelenggara);
+    }, [selectedTipePenyelenggara]);
+
+    const firstInit = async()=> {
+        await Promise.all([
+            getProvinsi(router,'?limit=999'),
+            getKpcKoordinat(router,'?limit=2265'),
+            getRegional(router,'?limit=99'),
+            // getPenyelenggara(router,'?limit=99')
+        ])
+        .then((responses)=>{
+            const [
+                provRes,
+                KPCKoordinat,
+                regionalsRes,
+                // penyelenggaraRes
+            ] = responses
+            
+            const provinces = provRes.data.data.map((item:ProvinsiI) => ({
+                value: item.id.toString(),
+                label: item.nama,
+            }));
+            provinces.unshift({
+                value: '',label: 'Pilih Semua Provinsi'
+            })
+            const regionals:Array<any> = regionalsRes.data.data.map((item:RegionalI) => ({
+                value: item.id.toString(),
+                label: item.nama,
+            }));
+            regionals.unshift({
+                value: '',label: 'Pilih Semua Regional'
+            })
+            setProvinsiOptions(provinces)
+            setRegionalOptions(regionals)
+            setDataSource(KPCKoordinat.data.data)
+            setPenyelenggaraOptions(list_penyelenggara)
+        })
+        .catch((err)=>{
+            console.log('Err: ',err);
+        })
+        .finally(()=>{
+            setIsLoading(false)
+        })
+    }
+
+    const fetchData = async(tipe_penyelenggara='',id_penyelenggara='',id_provinsi='',id_kabupaten_kota='',id_regional='',id_kprk='',id_kpc='')=>{
+        setIsLoading(true)
+        const tempParams: QueryParams = {};
+        tempParams.limit = '2265'
+
+        if (tipe_penyelenggara && tipe_penyelenggara != " "){
+            tempParams.type_penyelenggara = tipe_penyelenggara
+        }
+        if (id_penyelenggara && id_penyelenggara != " "){
+            tempParams.id_penyelenggara = id_penyelenggara
+        }
+        if (id_provinsi && id_provinsi != " "){
+            tempParams.id_provinsi = id_provinsi
+        }
+        if (id_kabupaten_kota && id_kabupaten_kota != " "){
+            tempParams.id_kabupaten_kota = id_kabupaten_kota
+        }
+        if (id_regional && id_regional != " "){
+            tempParams.id_regional = id_regional
+        }
+        if (id_kprk && id_kprk != " "){
+            tempParams.id_kprk = id_kprk
+        }
+        if (id_kpc && id_kpc != " "){
+            if (tipe_penyelenggara === "lpu" || tipe_penyelenggara === "lpk"){
+                tempParams.id_kpc = id_kpc
+            }else {
+                tempParams.id_rekonsiliasi = id_kpc
+            }
+        }
+
+        const KPCKoordinatParams = buildQueryParam(tempParams) || '';
+        await getKpcKoordinat(router,KPCKoordinatParams)
+        .then((response)=>{
+            setDataSource(response.data.data)
+        })
+        .catch((err)=>{
+            console.log('Err: ',err);
+        })
+        .finally(()=>{
+            setIsLoading(false)
+        })
+    }
+
+    useEffect(()=>{
+        firstInit()
+        /* eslint-disable react-hooks/exhaustive-deps */
+    },[])
+
+    const onSubmitFilter = (dataForm: z.infer<typeof FormSchema>)=> {
+        const { 
+            tipe_penyelenggara,
+            id_penyelenggara,
+            id_provinsi,
+            id_kabupaten_kota,
+            id_regional,
+            id_kprk,
+            id_kpc,
+        } = dataForm
+
+        fetchData(
+            tipe_penyelenggara,
+            id_penyelenggara,
+            id_provinsi,
+            id_kabupaten_kota,
+            id_regional,
+            id_kprk,
+            id_kpc,
+        )
+    }
+    
+    const getKotaByProvince = async(id:string|number)=> {
+        setIsKotaLoading(true)
+        if(form.getValues('id_kabupaten_kota')){
+            form.setValue('id_kabupaten_kota','')
+        }
+        try {
+            const response = await getKabKota(router,`?id_provinsi=${id}`)
+            const kabKotas:Array<any> = response.data.data.map((item:KabKotaI) => ({
+                value: item.id.toString(),
+                label: item.nama,
+            }));
+            kabKotas.unshift({
+                value: '',label: 'Pilih Semua Kab/Kota'
+            })
+
+            setKabKotaOptions(kabKotas)
+        } catch (error) {
+            console.log('Err: ',error);   
+        } finally {
+            setTimeout(()=>{
+              setIsKotaLoading(false)
+            },500)
+        }   
+    }
+
+    const getKcuByRegional = async(id:string|number)=> {
+        setIsKcuLoading(true)
+        await getKPRKByRegional(router, id)
+            .then((res)=>{
+                let kcus:Array<any> = res.data.data.map((item:kcuI) => ({
+                    value: item.id.toString(),
+                    label: item.nama,
+                }));
+                kcus.unshift({
+                  value: '',
+                  label: 'Semua KCU'
+                })
+                setkcuOptions(kcus)
+            })
+            .catch((err)=>{
+                console.log(err);
+            })
+            .finally(()=>{
+                setTimeout(()=> {
+                    setIsKcuLoading(false)
+                },500)
+            })
+    }
+
+    const getKpcByKcuHandler = async(id:string)=> {
+        setIskcpLoading(true)
+        try {
+            const res = await getKpcByKcu(router,id)
+            const KCPFiltered = res.data.data.map((item:ProfilKcpI) => ({
+                value: item.nomor_dirian.toString(),
+                label: item.nama,
+            }));
+            KCPFiltered.unshift({
+                value: '',label: 'Pilih Semua KCP'
+            })
+            setKcpOptions(KCPFiltered)
+            form.setValue('id_kpc','')
+        } catch (error) {
+            console.log('Err: ',error);
+        }
+        finally {
+            setTimeout(()=>{
+                setIskcpLoading(false)
+            },500)
+        }
+    }
+    return(
+        <div className={`relative`}>
+            <div className={cn(`absolute z-10 top-0 left-0 right-0 bg-[#AFD2DF]/70 backdrop-blur-sm`, isFilterHidden && 'h-3')}>
+                <div className='absolute left-1/2 -translate-x-1/2 -bottom-4 z-20'>
+                    <Button size={'icon'} type='button' onClick={()=>setIsFilterHidden(!isFilterHidden)}>
+                        <ChevronsUp className={isFilterHidden ? 'rotate-180' : ''}/>
+                    </Button>
+                </div>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmitFilter)} className={cn(`grid lg:grid-cols-3 gap-3 px-3 py-4 overflow-x-scroll`, isFilterHidden && 'h-0 py-1 overflow-hidden pointer-events-none')}>
+                    <FormField
+                        control={form.control}
+                        name="tipe_penyelenggara"
+                        render={({ field }) => (
+                            <FormItem>
+                                <Select 
+                                    onValueChange={(value:any)=>{
+                                        form.reset()
+                                        setTimeout(()=>{
+                                            field.onChange(value)
+                                            setSelectedTipePenyelenggara(value); // Update penyelenggara type
+                                        },500)
+                                    }} 
+                                    value={field.value}
+                                >
+                                    <SelectTrigger id="area" className='bg-background'>
+                                        <SelectValue placeholder="Pilih Penyelenggara" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    {/* <SelectItem value={' '}>Semua</SelectItem> */}
+                                        {list_penyelenggara_2.map((data,key)=>(
+                                            <SelectItem key={key} value={data.value}>{data.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
+                        )}
+                        />
+                        {filterOptionsMap[selectedTipePenyelenggara].includes('penyelenggara') && (
+                            <FormField
+                            control={form.control}
+                            name="id_penyelenggara"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <Select
+                                        onValueChange={(value)=>{
+                                            field.onChange(value)
+                                        }}
+                                        value={field.value}
+                                    >
+                                        <SelectTrigger id="area" className='bg-background'>
+                                            <SelectValue placeholder="Pilih Penyelenggara" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        <SelectItem value={' '}>Semua Penyelenggara</SelectItem>
+                                            {list_penyelenggara.map((data,key)=>(
+                                                <SelectItem key={key} value={`${data.value}`}>{data.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                        <FormField
+                            control={form.control}
+                            name="id_provinsi"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <Combobox
+                                        options={provinsiOptions}
+                                        placeholder="Pilih Provinsi"
+                                        value={field.value}
+                                        onSelect={(e) => {
+                                            form.setValue("id_provinsi", e);
+                                            getKotaByProvince(e);
+                                        }}
+                                        isLoading={isLoading}
+                                        disabled={provinsiOptions.length === 0}
+                                    />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="id_kabupaten_kota"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <Combobox
+                                        options={kabKotaOptions}
+                                        placeholder="Pilih Kab/Kota"
+                                        value={field.value}
+                                        onSelect={(e) => {
+                                            form.setValue('id_kabupaten_kota', e);
+                                        }}
+                                        isLoading={isLoading}
+                                        disabled={kabKotaOptions.length === 0 || isLoading}
+                                    />
+                                </FormItem>
+                            )}
+                        />
+                        {filterOptionsMap[selectedTipePenyelenggara].includes('regional') && (
+                            <FormField
+                            control={form.control}
+                            name="id_regional"
+                            render={({ field }) => (
+                                <FormItem>
+                                <Combobox 
+                                    options={regionalOptions}
+                                    placeholder="Pilih Regional"
+                                    value={field.value}
+                                    isLoading={isLoading}
+                                    onSelect={(e)=>{
+                                        form.setValue('id_regional',e)
+                                        getKcuByRegional(e)
+                                    }}
+                                    disabled={regionalOptions.length === 0}
+                                />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                        {filterOptionsMap[selectedTipePenyelenggara].includes('kprk') && (
+                            <FormField
+                            control={form.control}
+                            name="id_kprk"
+                            render={({ field }) => (
+                                <FormItem>
+                                <Combobox 
+                                    options={kcuOptions}
+                                    placeholder="Pilih KC/KCU"
+                                    value={field.value}
+                                    isLoading={isKcuLoading}
+                                    onSelect={(e)=>{
+                                        form.setValue('id_kprk',e)
+                                        getKpcByKcuHandler(e)
+                                    }}
+                                    disabled={kcuOptions.length === 0 || isKcuLoading}
+                                />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                        {filterOptionsMap[selectedTipePenyelenggara].includes('kpc') && (
+                            <FormField
+                            control={form.control}
+                            name="id_kpc"
+                            render={({ field }) => (
+                                <FormItem>
+                                <Combobox 
+                                    options={kcpOptions}
+                                    placeholder="Pilih KPC"
+                                    value={field.value}
+                                    isLoading={isKcpLoading}
+                                    onSelect={(e)=>{
+                                        form.setValue('id_kpc',e)
+                                    }}
+                                    disabled={kcpOptions.length === 0 || isKcpLoading}
+                                />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                        <div className='col-span-2 flex justify-end'>
+                            <Button type='submit'>
+                                Submit
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </div>
+            <div className='relative z-0'>
+                <MapsComp dataSource={dataSource} isLoading={isLoading}/>
+            </div>
+        </div>
+    )
+};
+
+export default Monitoring;

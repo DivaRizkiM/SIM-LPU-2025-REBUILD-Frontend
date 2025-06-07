@@ -1,0 +1,80 @@
+# dependencies
+/node_modules/
+/bower_components/
+
+# build output
+/dist/
+/build/
+/out/
+/.next/
+/.nuxt/
+/.vite/
+
+# lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# environment files
+.env
+.env.local
+.env.*.local
+
+# IDE/editor files
+.idea/
+.vscode/
+*.code-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# cache files
+.cache/
+.tmp/
+*.swp
+*.swo
+
+# production files
+/build/
+
+# debug files
+*.log
+*.bak
+
+# misc files
+*.pem
+*.key
+
+# Laravel specific files and directories
+/vendor/
+/public/storage
+/storage/*.key
+.env
+.env.*.backup
+.DS_Store
+
+# Laravel log files
+/storage/logs/*
+
+# Laravel cache and session files
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/cache/*
+
+# frontend build files
+/public/js/
+/public/css/
+/public/mix-manifest.json
+/public/hot
+/public/index.html
+
+# TypeScript files
+*.tsbuildinfo
+next-env.d.ts
