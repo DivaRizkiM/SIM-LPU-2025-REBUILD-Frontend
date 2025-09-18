@@ -44,7 +44,7 @@ const DetailKertasKerjaVerifikasi:NextPage = ()=>{
             tempParams.tahun = tahun
         }
         if (triwulan && triwulan != "all"){
-            tempParams.twiwulan = triwulan
+            tempParams.triwulan = triwulan
         }
         const params = buildQueryParam(tempParams) || '';
         
@@ -69,7 +69,7 @@ const DetailKertasKerjaVerifikasi:NextPage = ()=>{
             tempParams.tahun = tahunSelected
         }
         if (triwulanSelected && triwulanSelected != ""){
-            tempParams.twiwulan = triwulanSelected
+            tempParams.triwulan = triwulanSelected
         }
         const params = buildQueryParam(tempParams) || '';
         await getExportDetailKertasKerjaVerifikasi(router,params)
