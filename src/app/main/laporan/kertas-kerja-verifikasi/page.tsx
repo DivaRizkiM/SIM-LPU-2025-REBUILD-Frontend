@@ -77,7 +77,7 @@ const KertasKerjaVerifikasi:NextPage = ()=>{
             tempParams.tahun = tahun
         }
         if (triwulan && triwulan != "all"){
-            tempParams.twiwulan = triwulan
+            tempParams.triwulan = triwulan
         }
         if (regional && regional != "all"){
             tempParams.id_regional = regional
@@ -124,7 +124,7 @@ const KertasKerjaVerifikasi:NextPage = ()=>{
             tempParams.tahun = tahunSelected
         }
         if (triwulanSelected && triwulanSelected != ""){
-            tempParams.twiwulan = triwulanSelected
+            tempParams.triwulan = triwulanSelected
         }
         if (regionalSelected && regionalSelected != ""){
             tempParams.id_regional = regionalSelected
