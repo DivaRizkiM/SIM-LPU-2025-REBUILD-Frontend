@@ -181,9 +181,11 @@ const Detail: NextPage = () => {
         id_ltk: data.id_ltk,
         verifikasi_akuntansi: data.verifikasi_akuntansi || "0",
         verifikasi_pso: data.verifikasi_pso || "0",
-        verifikasi_proporsi: (data.proporsi_rumus_fase_1 !== undefined && data.proporsi_rumus_fase_1 !== null)
-          ? String(data.proporsi_rumus_fase_1)
-          : "0",
+        verifikasi_proporsi:
+          data.proporsi_rumus_fase_1 !== undefined &&
+          data.proporsi_rumus_fase_1 !== null
+            ? String(data.proporsi_rumus_fase_1)
+            : "0",
         catatan_pemeriksa: data.catatan_pemeriksa || "",
       };
     });
@@ -391,28 +393,21 @@ const Detail: NextPage = () => {
                     }
                     name="verifikasi_akuntansi"
                     className={`
-                                        w-full col-span-3 
-                                        ${
-                                          dataVerifications[indexSelected]
-                                            ?.isVerifikasiAkuntansiSesuai ===
-                                            "1" ||
-                                          dataVerifications[indexSelected]
-                                            ?.isVerifikasiAkuntansiSesuai === ""
-                                            ? "bg-secondary"
-                                            : ""
-                                        }
-                                        ${
-                                          dataVerifications[indexSelected]
-                                            ?.verifikasi_akuntansi === ""
-                                            ? "border-red-600"
-                                            : ""
-                                        }
-                                    `}
+    w-full col-span-3 
+    ${
+      dataVerifications[indexSelected]?.isVerifikasiAkuntansiSesuai === "1"
+        ? "bg-secondary"
+        : ""
+    }
+    ${
+      dataVerifications[indexSelected]?.verifikasi_akuntansi === ""
+        ? "border-red-600"
+        : ""
+    }
+  `}
                     readOnly={
                       dataVerifications[indexSelected]
-                        ?.isVerifikasiAkuntansiSesuai === "1" ||
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiAkuntansiSesuai === ""
+                        ?.isVerifikasiAkuntansiSesuai === "1"
                     }
                     onChange={handleInput}
                   />
@@ -441,10 +436,12 @@ const Detail: NextPage = () => {
                     value={dataVerifications[indexSelected]?.verifikasi_pso}
                     name="verifikasi_pso"
                     className={`
-                                        w-full col-span-3 bg-secondary
-                                    `}
-                    readOnly
-                    // readOnly={dataVerifications[indexSelected]?.isVerifikasiPsoSesuai === "1" || dataVerifications[indexSelected]?.isVerifikasiPsoSesuai === ""}
+    w-full col-span-3 bg-secondary
+  `}
+                    readOnly={
+                      dataVerifications[indexSelected]
+                        ?.isVerifikasiPsoSesuai === "1"
+                    }
                     onChange={handleInput}
                   />
                 </div>
@@ -513,33 +510,24 @@ const Detail: NextPage = () => {
                     value={
                       dataVerifications[indexSelected]?.proporsi_rumus_fase_1
                     }
-                    name="verifikasi_proporsi"
+                    name="proporsi_rumus_fase_1" // <-- ubah dari "verifikasi_proporsi" ke "proporsi_rumus_fase_1"
                     className={`
-                                        w-full col-span-3 
-                                        ${
-                                          dataVerifications[indexSelected]
-                                            ?.isVerifikasiProporsiSesuai ===
-                                            "1" ||
-                                          dataVerifications[indexSelected]
-                                            ?.isVerifikasiProporsiSesuai === ""
-                                            ? "bg-secondary"
-                                            : ""
-                                        }
-                                        ${
-                                          dataVerifications[indexSelected]
-                                            ?.proporsi_rumus_fase_1 ===
-                                            undefined ||
-                                          dataVerifications[indexSelected]
-                                            ?.proporsi_rumus_fase_1 === null
-                                            ? "border-red-600"
-                                            : ""
-                                        }
-                                    `}
+    w-full col-span-3 
+    ${
+      dataVerifications[indexSelected]?.isVerifikasiProporsiSesuai === "1"
+        ? "bg-secondary"
+        : ""
+    }
+    ${
+      dataVerifications[indexSelected]?.proporsi_rumus_fase_1 === undefined ||
+      dataVerifications[indexSelected]?.proporsi_rumus_fase_1 === null
+        ? "border-red-600"
+        : ""
+    }
+  `}
                     readOnly={
                       dataVerifications[indexSelected]
-                        ?.isVerifikasiProporsiSesuai === "1" ||
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiProporsiSesuai === ""
+                        ?.isVerifikasiProporsiSesuai === "1"
                     }
                     onChange={handleInput}
                     symbol="%"
