@@ -567,6 +567,7 @@ export interface LtkI {
   catatan_pemeriksa: string;
   kategori_cost: string;
   perhitungan_full_cost?: string;
+  proporsi_rumus_fase_1?: string;
   hasil_full_cost?: string;
 }
 
@@ -578,5 +579,6 @@ export interface IFormLtkVerifikasi {
   isVerifikasiPsoSesuai?: "0" | "1" | ""
   verifikasi_proporsi: string;
   isVerifikasiProporsiSesuai?: "0" | "1" | ""
+  proporsi_rumus_fase_1?: string;
   catatan_pemeriksa?: string;
 }
