@@ -425,60 +425,26 @@ const Detail: NextPage = () => {
                 <div className="grid gap-2 md:grid-cols-4 items-center">
                   <div>
                     <Label>
-                      Nominal Verifikasi <span className="text-red-500">*</span>
-                    </Label>
-                    {dataVerifications[indexSelected]?.verifikasi_pso ===
-                      "" && (
-                      <div className="text-xs text-red-600">Wajib diisi</div>
-                    )}
-                  </div>
-                  <CurrencyInput
-                    value={dataVerifications[indexSelected]?.verifikasi_pso}
-                    name="verifikasi_pso"
-                    className={`
-    w-full col-span-3 bg-secondary
-  `}
-                    readOnly={
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiPsoSesuai === "1"
-                    }
-                    onChange={handleInput}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <Label>Jenis Perhitungan</Label>
-                  <Input
-                    value={selectedData?.proporsi_rumus}
-                    className="w-full col-span-3 bg-secondary"
-                    readOnly
-                  />
-                </div>
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <div>
-                    <Label>
                       Pilih Kondisi <span className="text-red-500">*</span>
                     </Label>
                     {!dataVerifications[indexSelected]
-                      ?.isVerifikasiProporsiSesuai && (
+                      ?.isVerifikasiPsoSesuai && (
                       <div className="text-xs text-red-600">Wajib diisi</div>
                     )}
                   </div>
                   <div className="w-full col-span-3">
                     <Select
                       value={
-                        dataVerifications[indexSelected]
-                          ?.isVerifikasiProporsiSesuai
+                        dataVerifications[indexSelected]?.isVerifikasiPsoSesuai
                       }
                       onValueChange={(val: "0" | "1") =>
-                        selectHandler(val, "proporsi")
+                        selectHandler(val, "pso")
                       }
                     >
                       <SelectTrigger
                         className={
                           !dataVerifications[indexSelected]
-                            ?.isVerifikasiProporsiSesuai
+                            ?.isVerifikasiPsoSesuai
                             ? "border-red-600"
                             : ""
                         }
@@ -499,36 +465,58 @@ const Detail: NextPage = () => {
                     <Label>
                       Nominal Verifikasi <span className="text-red-500">*</span>
                     </Label>
-                    {(dataVerifications[indexSelected]
-                      ?.proporsi_rumus_fase_1 === undefined ||
-                      dataVerifications[indexSelected]
-                        ?.proporsi_rumus_fase_1 === null) && (
+                    {dataVerifications[indexSelected]?.verifikasi_pso ===
+                      "" && (
                       <div className="text-xs text-red-600">Wajib diisi</div>
                     )}
+                  </div>
+                  <CurrencyInput
+                    value={dataVerifications[indexSelected]?.verifikasi_pso}
+                    name="verifikasi_pso"
+                    className={`
+                      w-full col-span-3
+                      ${
+                        dataVerifications[indexSelected]
+                          ?.isVerifikasiPsoSesuai === "1"
+                          ? "bg-secondary"
+                          : ""
+                      }
+                      ${
+                        dataVerifications[indexSelected]?.verifikasi_pso === ""
+                          ? "border-red-600"
+                          : ""
+                      }
+                    `}
+                    readOnly={
+                      dataVerifications[indexSelected]
+                        ?.isVerifikasiPsoSesuai === "1"
+                    }
+                    onChange={handleInput}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="grid gap-2 md:grid-cols-4 items-center">
+                  <Label>Jenis Perhitungan</Label>
+                  <Input
+                    value={selectedData?.proporsi_rumus}
+                    className="w-full col-span-3 bg-secondary"
+                    readOnly
+                  />
+                </div>
+                <div className="grid gap-2 md:grid-cols-4 items-center">
+                  <div>
+                    <Label>Proporsi</Label>
                   </div>
                   <CurrencyInput
                     value={
                       dataVerifications[indexSelected]?.proporsi_rumus_fase_1
                     }
-                    name="proporsi_rumus_fase_1" // <-- ubah dari "verifikasi_proporsi" ke "proporsi_rumus_fase_1"
+                    name="proporsi_rumus_fase_1"
                     className={`
-    w-full col-span-3 
-    ${
-      dataVerifications[indexSelected]?.isVerifikasiProporsiSesuai === "1"
-        ? "bg-secondary"
-        : ""
-    }
-    ${
-      dataVerifications[indexSelected]?.proporsi_rumus_fase_1 === undefined ||
-      dataVerifications[indexSelected]?.proporsi_rumus_fase_1 === null
-        ? "border-red-600"
-        : ""
-    }
-  `}
-                    readOnly={
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiProporsiSesuai === "1"
-                    }
+                      w-full col-span-3 bg-secondary
+                    `}
+                    readOnly={true}
                     onChange={handleInput}
                     symbol="%"
                   />
