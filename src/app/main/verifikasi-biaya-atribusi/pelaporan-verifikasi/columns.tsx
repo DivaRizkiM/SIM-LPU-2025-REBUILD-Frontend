@@ -101,9 +101,9 @@ const generateColumnGroup = (monthIndex: number) => {
               {/* Download Button */}
               {monthData?.lampiran === "Y" ? (
                 <a
-                  href={data.laporan[monthIndex - 1].url_lampiran}
+                  href={monthData?.url_lampiran}
                   download
-                  className="flex items-center text-green-600 hover:underline text-sm"
+                  className="flex items-center text-sm text-green-600 hover:underline"
                 >
                   <DownloadIcon className="w-4 h-4 me-1" />
                 </a>
