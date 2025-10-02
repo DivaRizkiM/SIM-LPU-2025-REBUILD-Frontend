@@ -34,8 +34,8 @@ export interface VerifikasiAtribusiI {
     pelaporan: string;
     verifikasi: string;
     isLock: boolean;
-    lampiran?: string, 
-    url_lampiran?: string 
+    lampiran?: string;
+    url_lampiran?: string;
   }[];
 }
 
@@ -85,30 +85,28 @@ const generateColumnGroup = (monthIndex: number) => {
 
           return (
             <div className="flex items-center justify-center gap-x-2">
-              {(monthData.pelaporan !== "Rp. 0" && !isLock) && (
-              <Link
-                href={`./detail?ba_id=${meta.ba_id}&bulan=${monthData.bulan}&kode_rek=${data.kode_rekening}&id_kcu=${meta.kcu_id}&tahun=${meta.tahun}`}
-                className={`flex items-center text-sm text-blue-600 hover:underline ${
-                  isLock ? "pointer-events-none opacity-50" : ""
-                }`}
-              >
-                <FilePenIcon className="w-4 h-4 me-1" />
-                {isLock && (
-                  <Lock className="ms-1 w-[10px] h-[10px] text-red-800" />
-                )}
-              </Link>
-		)}
+              {monthData.pelaporan !== "Rp. 0" && !isLock && (
+                <Link
+                  href={`./detail?ba_id=${meta.ba_id}&bulan=${monthData.bulan}&kode_rek=${data.kode_rekening}&id_kcu=${meta.kcu_id}&tahun=${meta.tahun}`}
+                  className={`flex items-center text-sm text-blue-600 hover:underline ${
+                    isLock ? "pointer-events-none opacity-50" : ""
+                  }`}
+                >
+                  <FilePenIcon className="w-4 h-4 me-1" />
+                  {isLock && (
+                    <Lock className="ms-1 w-[10px] h-[10px] text-red-800" />
+                  )}
+                </Link>
+              )}
               {/* Download Button */}
               {monthData?.lampiran === "Y" ? (
-                <button
-                  onClick={() => {
-                    const url = monthData?.url_lampiran;
-                    if (url) window.open(url, "_blank");
-                  }}
-                  className="flex items-center text-sm text-green-600 hover:underline"
+                <a
+                  href={data.laporan[monthIndex - 1].url_lampiran}
+                  download
+                  className="flex items-center text-green-600 hover:underline text-sm"
                 >
                   <DownloadIcon className="w-4 h-4 me-1" />
-                </button>
+                </a>
               ) : (
                 <div className="flex items-center text-xs text-red-600 italic">
                   <DownloadIcon className="w-4 h-4 me-1" />
