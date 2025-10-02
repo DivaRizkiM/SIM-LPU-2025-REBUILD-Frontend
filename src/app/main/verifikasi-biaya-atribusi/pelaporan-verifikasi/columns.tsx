@@ -74,7 +74,7 @@ const generateColumnGroup = (monthIndex: number) => {
       },
       {
         id: "actions",
-        header: "Aksi",
+        header: "Aksii",
         cell: ({ row, table }) => {
           const data = row.original;
           const meta = table.options.meta as any;
