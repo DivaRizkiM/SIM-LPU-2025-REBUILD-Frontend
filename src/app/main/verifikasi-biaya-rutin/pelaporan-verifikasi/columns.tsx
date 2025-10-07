@@ -1,26 +1,17 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { TooltipButton } from "@/components/tools/tooltip";
 import {
   DownloadIcon,
   FilePenIcon,
   Lock,
   LockKeyholeOpen,
-  MoreHorizontal,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Link from "next/link";
-import { TooltipButton } from "@/components/tools/tooltip";
 
-// This type is used to define the shape of our data.
+/* ===== Types ===== */
 export interface VerifikasiAtribusiI {
   id_verifikasi_biaya_rutin: string;
   kode_rekening: string;
@@ -38,17 +29,18 @@ export interface VerifikasiAtribusiI {
 
 const columnHelper = createColumnHelper<VerifikasiAtribusiI>();
 
-// Helper: cek Rp. 0 atau Rp. 0,00
+/* Rp. 0 atau Rp. 0,00 */
 const isZeroRupiah = (v?: string) => /^Rp\.\s?0(,00)?$/.test(v ?? "");
 
-const generateColumnGroup = (monthIndex: number) => {
-  return columnHelper.group({
+/* ===== Column Groups per Bulan ===== */
+const generateColumnGroup = (monthIndex: number) =>
+  columnHelper.group({
     id: `laporan${monthIndex}`,
     header: (ctx) => {
       const meta = ctx.table.options.meta as any;
       return (
-        <div className="flex h-8 items-center justify-center bg-sky-950 text-center text-white">
-          {meta.getMonth(monthIndex, (ctx.table.options.meta as any).triwulan)}
+        <div className="flex h-8 items-center justify-center bg-sky-950 text-white">
+          {meta.getMonth(monthIndex, meta.triwulan)}
         </div>
       );
     },
@@ -56,23 +48,15 @@ const generateColumnGroup = (monthIndex: number) => {
       {
         header: "Pelaporan",
         cell: (ctx) => {
-          const data = ctx.row.original;
-          return (
-            <div className="text-nowrap">
-              {data.laporan[monthIndex - 1].pelaporan}
-            </div>
-          );
+          const item = ctx.row.original.laporan[monthIndex - 1];
+          return <div className="text-nowrap">{item.pelaporan}</div>;
         },
       },
       {
         header: "Verifikasi",
         cell: (ctx) => {
-          const data = ctx.row.original;
-          return (
-            <div className="text-nowrap">
-              {data.laporan[monthIndex - 1].verifikasi}
-            </div>
-          );
+          const item = ctx.row.original.laporan[monthIndex - 1];
+          return <div className="text-nowrap">{item.verifikasi}</div>;
         },
       },
       {
@@ -84,66 +68,81 @@ const generateColumnGroup = (monthIndex: number) => {
 
           const item = data.laporan[monthIndex - 1];
           const isLock = !!item?.isLock;
-          const canEdit = !isLock && !isZeroRupiah(item?.pelaporan);
+          const isZero = isZeroRupiah(item?.pelaporan);
           const hasLampiran = item?.lampiran === "Y" && !!item?.url_lampiran;
 
-          // jika pelaporan 0, tidak ada aksi sama sekali
-          if (isZeroRupiah(item?.pelaporan)) return null;
+          /* state izin */
+          const canEdit = !isLock && !isZero;
+          const canDownload = hasLampiran && !isLock && !isZero;
+
+          /* pesan tooltip */
+          const editTooltip = isLock
+            ? "Akses edit terkunci"
+            : isZero
+            ? "Nilai Rp 0, tidak ada yang bisa diedit"
+            : "Edit";
+          const dlTooltip = !hasLampiran
+            ? "Tidak ada lampiran"
+            : isLock
+            ? "Lampiran terkunci"
+            : isZero
+            ? "Pelaporan 0 – tidak bisa unduh"
+            : "Unduh lampiran";
 
           return (
             <div className="flex items-center justify-center gap-x-1">
-              {/* EDIT (nonaktif ketika lock atau pelaporan 0) */}
+              {/* EDIT */}
               {canEdit ? (
                 <Link
                   href={`./detail?ba_id=${meta.br_id}&bulan=${item.bulan}&kode_rek=${data.kode_rekening}&id_kcu=${meta.kcu_id}&kpc_id=${meta.kcp_id}&tahun=${meta.tahun}`}
                   className="flex items-center text-sm text-blue-600 hover:underline"
+                  aria-label="Edit"
                 >
                   <FilePenIcon className="me-1 h-4 w-4" />
                 </Link>
               ) : (
-                <TooltipButton
-                  tooltipText={
-                    isLock ? "Akses Edit Terkunci" : "Tidak ada nilai untuk diedit"
-                  }
-                >
-                  <span className="flex cursor-not-allowed items-center text-blue-600/50">
+                <TooltipButton tooltipText={editTooltip}>
+                  <span
+                    className="flex cursor-not-allowed items-center text-blue-600/40 opacity-60"
+                    aria-disabled
+                    tabIndex={-1}
+                  >
                     <FilePenIcon className="me-1 h-4 w-4" />
                   </span>
                 </TooltipButton>
               )}
 
-              {/* DOWNLOAD (ikut terkunci kalau isLock = true) */}
-              {hasLampiran && !isLock ? (
+              {/* DOWNLOAD */}
+              {canDownload ? (
                 <a
                   href={item.url_lampiran}
                   download
                   className="flex items-center text-sm text-green-600 hover:underline"
+                  aria-label="Unduh lampiran"
                 >
                   <DownloadIcon className="me-1 h-4 w-4" />
                 </a>
-              ) : hasLampiran && isLock ? (
-                <TooltipButton tooltipText="Lampiran terkunci">
+              ) : (
+                <TooltipButton tooltipText={dlTooltip}>
                   <span
-                    className="flex cursor-not-allowed items-center text-green-600/50"
+                    className={`flex items-center ${
+                      hasLampiran ? "text-green-600/40" : "text-muted-foreground/50"
+                    } cursor-not-allowed opacity-60`}
                     aria-disabled
                     tabIndex={-1}
                   >
                     <DownloadIcon className="me-1 h-4 w-4" />
                   </span>
                 </TooltipButton>
-              ) : (
-                <span className="flex items-center text-xs text-red-700">
-                  <DownloadIcon className="me-1 h-4 w-4" />
-                </span>
               )}
 
               {/* STATUS KUNCI */}
               {isLock ? (
-                <TooltipButton tooltipText={"Akses Edit Terkunci"}>
+                <TooltipButton tooltipText="Akses edit terkunci">
                   <Lock className="h-[10px] w-[10px] text-red-800" />
                 </TooltipButton>
               ) : (
-                <TooltipButton tooltipText={"Akses Edit terbuka"}>
+                <TooltipButton tooltipText="Akses edit terbuka">
                   <LockKeyholeOpen className="h-[10px] w-[10px]" />
                 </TooltipButton>
               )}
@@ -153,8 +152,8 @@ const generateColumnGroup = (monthIndex: number) => {
       },
     ],
   });
-};
 
+/* ===== Export Columns ===== */
 export const columns: ColumnDef<VerifikasiAtribusiI>[] = [
   { accessorKey: "number", header: "No" },
   { accessorKey: "kode_rekening", header: "Kode Rekening" },
