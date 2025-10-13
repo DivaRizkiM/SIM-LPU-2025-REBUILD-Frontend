@@ -104,6 +104,7 @@ const Add: FC<AddI> = ({ data, trigger }) => {
     setIsSubmitting(true);
     const payload = {
       ...dataFormRaw,
+      id_kantor: parseInt(dataFormRaw.id_kantor),
       id_penyelenggara: parseInt(dataFormRaw.id_penyelenggara),
       id_jenis_kantor: parseInt(dataFormRaw.id_jenis_kantor),
       id_provinsi: parseInt(dataFormRaw.id_provinsi),
@@ -166,36 +167,26 @@ const Add: FC<AddI> = ({ data, trigger }) => {
       setJenisKantorOptions(jenisKantor_list);
 
       if (data) {
-        await Promise.all([
-          data.id_provinsi && getKabKotaByProvinsi(data.id_provinsi),
-          data.id_kabupaten_kota && getKecamatanByKota(data.id_kabupaten_kota),
-          data.id_kecamatan && getKelurahanByKecamatan(data.id_kecamatan),
-        ]);
-
-        form.setValue("id_penyelenggara", data.id_penyelenggara.toString());
-        form.setValue("alamat", data.alamat);
-        form.setValue("longitude", data.longitude);
-        form.setValue("latitude", data.latitude);
-        form.setValue("id_kantor", data.id_kantor);
-        form.setValue("nama_kantor", data.nama_kantor);
-        form.setValue("id_jenis_kantor", data.id_jenis_kantor.toString());
-
         form.setValue(
-          "id_provinsi",
-          data.id_provinsi ? data.id_provinsi.toString() : ""
+          "id_penyelenggara",
+          data.id_penyelenggara?.toString() ?? ""
         );
+        form.setValue("alamat", data.alamat ?? "");
+        form.setValue("longitude", data.longitude?.toString() ?? "");
+        form.setValue("latitude", data.latitude?.toString() ?? "");
+        form.setValue("id_kantor", data.id_kantor?.toString() ?? "");
+        form.setValue("nama_kantor", data.nama_kantor ?? "");
+        form.setValue(
+          "id_jenis_kantor",
+          data.id_jenis_kantor?.toString() ?? ""
+        );
+        form.setValue("id_provinsi", data.id_provinsi?.toString() ?? "");
         form.setValue(
           "id_kabupaten_kota",
-          data.id_kabupaten_kota ? data.id_kabupaten_kota.toString() : ""
+          data.id_kabupaten_kota?.toString() ?? ""
         );
-        form.setValue(
-          "id_kecamatan",
-          data.id_kecamatan ? data.id_kecamatan.toString() : ""
-        );
-        form.setValue(
-          "id_kelurahan",
-          data.id_kelurahan ? data.id_kelurahan.toString() : ""
-        );
+        form.setValue("id_kecamatan", data.id_kecamatan?.toString() ?? "");
+        form.setValue("id_kelurahan", data.id_kelurahan?.toString() ?? "");
       }
     } catch (error) {
       if (error instanceof Error) {
