@@ -69,7 +69,7 @@ const AddData:FC<addDataI> = ({ trigger,data })=> {
     }
     else {
       const payload = {
-        nama: data.nama
+        nama: dataForm.nama
       }
       await putProvinsi(router,payload,data.id)
       .then(()=>{
