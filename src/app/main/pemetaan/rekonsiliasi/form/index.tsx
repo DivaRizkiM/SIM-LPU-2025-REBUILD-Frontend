@@ -100,58 +100,40 @@ const Add: FC<AddI> = ({ data, trigger }) => {
     resolver: zodResolver(FormSchema),
   });
 
-  const onSubmit = async (dataForm: z.infer<typeof FormSchema>) => {
+  const onSubmit = async (dataFormRaw: z.infer<typeof FormSchema>) => {
     setIsSubmitting(true);
+    const payload = {
+      ...dataFormRaw,
+      id_penyelenggara: parseInt(dataFormRaw.id_penyelenggara),
+      id_jenis_kantor: parseInt(dataFormRaw.id_jenis_kantor),
+      id_provinsi: parseInt(dataFormRaw.id_provinsi),
+      id_kabupaten_kota: parseInt(dataFormRaw.id_kabupaten_kota),
+      id_kecamatan: parseInt(dataFormRaw.id_kecamatan),
+      id_kelurahan: parseInt(dataFormRaw.id_kelurahan),
+      latitude: parseFloat(dataFormRaw.latitude),
+      longitude: parseFloat(dataFormRaw.longitude),
+    };
 
-    if (!data) {
-      await postRekonsiliasi(router, dataForm as any)
-        .then(() => {
-          trigger();
-          toast({
-            title: "Berhasil menambahkan rekonsiliasi!",
-          });
-          return ctx.dispatch({
-            isModal: undefined,
-          });
-        })
-        .catch((err) => {
-          console.log("Err: ", err);
-          toast({
-            title: err?.message || "Terdapat kesalahan",
-            variant: "destructive",
-          });
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-        });
-    } else {
-      dataForm.id_jenis_kantor = parseInt(dataForm.id_jenis_kantor);
-      dataForm.id_penyelenggara = parseInt(dataForm.id_penyelenggara);
-      dataForm.id_provinsi = parseInt(dataForm.id_provinsi);
-      dataForm.id_kabupaten_kota = parseInt(dataForm.id_kabupaten_kota);
-      dataForm.id_kecamatan = parseInt(dataForm.id_kecamatan);
-      await putRekonsiliasi(router, dataForm as any, data.id)
-        .then(() => {
-          trigger();
-          toast({
-            title: "Berhasil mengubah data!",
-          });
-          return ctx.dispatch({
-            isModal: undefined,
-          });
-        })
-        .catch((err) => {
-          console.log("Err: ", err);
-          toast({
-            title: err?.response?.data?.message
-              ? stringifyError(err?.response?.data?.message)
-              : "Terdapat kesalahan",
-            variant: "destructive",
-          });
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-        });
+    try {
+      if (!data) {
+        await postRekonsiliasi(router, payload as any);
+        toast({ title: "Berhasil menambahkan rekonsiliasi!" });
+      } else {
+        await putRekonsiliasi(router, payload as any, data.id);
+        toast({ title: "Berhasil mengubah data!" });
+      }
+      await trigger();
+      ctx.dispatch({ isModal: undefined });
+    } catch (err: any) {
+      console.log("Err: ", err);
+      toast({
+        title: err?.response?.data?.message
+          ? stringifyError(err?.response?.data?.message)
+          : err?.message || "Terdapat kesalahan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const firstInit = async () => {
