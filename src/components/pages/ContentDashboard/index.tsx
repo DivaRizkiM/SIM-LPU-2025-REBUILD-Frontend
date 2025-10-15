@@ -20,7 +20,7 @@ import { useToast } from "@/components/ui/use-toast"
 import GaugeChart from "@/components/Chart/GaugeChart"
 import { PieChartComponent } from "@/components/Chart/PieChartFull"
 import { PieChartDonut } from "@/components/Chart/PieChartDonut"
-import { getRealisasiAnggaran, getRealisasiBiayaChart, getRealisasiBiayaPie, getRealisasiPendapatanDonut, getTargetAnggaranDashboard } from "../../../../services"
+import { getRealisasiAnggaran, getRealisasiBiayaChart, getRealisasiBiayaPie, getRealisasiPendapatanDonut, getTargetAnggaranDashboard, getJumlahLPU } from "../../../../services"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { BarChartProps, DonutChartProps, GaugeChartProps, PieChartProps } from "@/lib/types"
@@ -33,25 +33,6 @@ export const metadata: Metadata = {
   title: "Dashboard",
   description: "dashboard app.",
 }
-
-const buttonsSpecial = [
-  { 
-    label: `Target Anggaran Tahun 2025`, 
-    href: '/main/master-data/target-anggaran' 
-  },
-  { 
-    label: 'Target Kantor LPU Tahun 2025', 
-    href: '/main/profilKCP' 
-  },
-]
-const buttons = [
-  { label: 'Pemetaan', href: '/main/pemetaan/monitoring' },
-  { label: 'Profil KPC', href: '/main/profilKCP' },
-  { label: 'Verifikasi Biaya', href: '/main/verifikasi-biaya-atribusi' },
-  { label: 'Verifikasi Produksi', href: '/main/verifikasi-produksi' },
-  { label: 'Verifikasi Pendapatan', href: '/main/verifikasi-biaya-rutin' },
-  { label: 'Laporan Realisasi', href: '/main/laporan/kertas-kerja-verifikasi' },
-];
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -77,10 +58,11 @@ export default function DashboardPage() {
     const { data: DonutData, isLoading:isDonutDataLoading } = useSWR(["donut", getRealisasiPendapatanDonut], ([_, apiCall]) => fetcher(apiCall));
     const { data: BarData, isLoading:isBarDataLoading } = useSWR(["bar", getRealisasiBiayaChart], ([_, apiCall]) => fetcher(apiCall));
     const { data: TargetAnggaran, isLoading:isTargetAnggaranLoading } = useSWR(["target", getTargetAnggaranDashboard], ([_, apiCall]) => fetcher(apiCall));
+    const { data: JumlahLPU, isLoading:isJumlahLPULoading } = useSWR(["jumlahlpu", getJumlahLPU], ([_, apiCall]) => fetcher(apiCall));
 
     // Loading states
     const isLoading =
-      !GaugeData || !PieData || !DonutData || !BarData || !TargetAnggaran;
+      !GaugeData || !PieData || !DonutData || !BarData || !TargetAnggaran || !JumlahLPU;
 
     // Handle errors (optional)
     // SWR handles caching and revalidation automatically
@@ -91,30 +73,56 @@ export default function DashboardPage() {
         <div className="flex-1 space-y-4 p-8 pt-6">
           <div className="flex items-center justify-between space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-            {/* <div className="flex items-center space-x-2">
-              <CalendarDateRangePicker />
-              <Button onClick={()=>{
-                toast({
-                  title: "Ada kesalahan..",
-                  description: 'Lorem ipsum'
-                })
-              }}>Download</Button>
-            </div> */}
           </div>
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="analytics" disabled>
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="reports" disabled>
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value="notifications" disabled>
-                Notifications
-              </TabsTrigger>
-            </TabsList>
             <TabsContent value="overview" className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-4">
+                <Card className="relative">
+                {isJumlahLPULoading && (
+                  <div className="absolute top-0 bottom-0 left-0 right-0 bg-black/5 dark:bg-black/25 z-10 flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin mt-8"/>
+                  </div>
+                )}
+                  <CardHeader>
+                    <CardTitle>Jumlah Kantor LPU</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pl-2 w-min mx-auto my-auto items-center">
+                    <span className="text-4xl font-bold">
+                    {typeof JumlahLPU?.count === "number" ? numFormatter(JumlahLPU.count) : "-"}
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card className="relative">
+                  <CardHeader>
+                    <CardTitle>Jumlah Mitra LPU</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pl-2 w-min mx-auto my-auto items-center">
+                    <span className="text-4xl font-bold">
+                      -
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card className="relative">
+                  <CardHeader>
+                    <CardTitle>Jumlah Pengguna Layanan Kantor LPU</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pl-2 w-min mx-auto my-auto items-center">
+                    <span className="text-4xl font-bold">
+                      -
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card className="relative">
+                  <CardHeader>
+                    <CardTitle>Jumlah Pengguna Layanan Mitra LPU</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pl-2 w-min mx-auto my-auto items-center">
+                    <span className="text-4xl font-bold">
+                      -
+                    </span>
+                  </CardContent>
+                </Card>
+              </div>
               <div className="grid gap-4 lg:grid-cols-3">
                 <Card className="relative">
                 {isGaugeDataLoading && (
@@ -178,46 +186,6 @@ export default function DashboardPage() {
                     )}
                   </CardContent>
                 </Card>
-                {/* <Card className="col-span-3">
-                  <CardHeader>
-                    <CardTitle>Recent Sales</CardTitle>
-                    <CardDescription>
-                      You made 265 sales this month.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <RecentSales />
-                  </CardContent>
-                </Card> */}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-                  <Link href={buttonsSpecial[0].href}>
-                    <Button className="w-full py-8 relative">
-                      {buttonsSpecial[0].label}
-                      <br />
-                      {isTargetAnggaranLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin"/> 
-                      ): (
-                        `Rp. ${numFormatter(TargetAnggaran?.data || 0)}`
-                      )}
-                    </Button>
-                  </Link>
-                  <Link href={buttonsSpecial[1].href}>
-                    <Button className="w-full py-8">
-                      {buttonsSpecial[1].label}
-                    </Button>
-                  </Link>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {buttons.map((button, index) => (
-                  <Link key={index} href={button.href}>
-                    <Button 
-                      className="w-full py-7"
-                    >
-                      {button.label}
-                    </Button>
-                  </Link>
-                ))}
               </div>
             </TabsContent>
           </Tabs>
