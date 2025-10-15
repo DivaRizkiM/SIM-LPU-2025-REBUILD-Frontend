@@ -1564,6 +1564,16 @@ export const getTargetAnggaranDashboard = (
     `/target-anggaran-dashboard${payload}`
   );
 };
+export const getJumlahLPU = (
+  router: AppRouterInstance,
+  payload: any,
+) => {
+  return UseGuardInstance(router).get<
+    ResponseAPI
+  >(
+    `/kpc-count${payload}`
+  );
+}
 //Sync Log
 export const getAllUserLog = (
   router: AppRouterInstance,
