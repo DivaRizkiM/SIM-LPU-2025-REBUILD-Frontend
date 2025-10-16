@@ -17,7 +17,7 @@ import { DataLampiranBiaya } from "./components/lampiran_biaya";
 import { DataDashboardProduksiPendapatan } from "./components/dashboard_produksi_pendapatan";
 import { DataLTK } from './components/data_biaya_ltk';
 import { DataPendapatan } from './components/data_pendapatan';
-import { DataMitraLpu, DataMitraLPU } from "./components/data_mitra";
+import { DataMitraLpu} from "./components/data_mitra";
 
 const dataCards = [
     {
