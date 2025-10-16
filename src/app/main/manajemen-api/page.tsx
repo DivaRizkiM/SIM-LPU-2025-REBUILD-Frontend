@@ -10,13 +10,14 @@ import { DataProduksiPrognosa } from "./components/data_produksi_prognosa";
 import { DataBiayaAtribusi } from "./components/data_biaya_atribusi";
 import { DataBiayaNasional } from "./components/data_biaya_Nasional";
 import { DataProduksiNasional } from "./components/data_produksi_Nasional";
-import { syncKCP, syncKCU, syncKategoriBiaya, syncKategoriPendapatan, syncKelurahan, syncLampiranBiaya, syncLayananJasaKeuangan, syncLayananKurir, syncPetugasKCP, syncRegional, syncRekeningBiaya, syncRekeningProduksi, syncTipeBisnis } from "../../../../services";
+import { syncKCP, syncKCU, syncKategoriBiaya, syncKategoriPendapatan, syncKelurahan, syncLampiranBiaya, syncLayananJasaKeuangan, syncLayananKurir, syncPetugasKCP, syncRegional, syncRekeningBiaya, syncRekeningProduksi, syncTipeBisnis, syncMitraLpu } from "../../../../services";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
 import { DataLampiranBiaya } from "./components/lampiran_biaya";
 import { DataDashboardProduksiPendapatan } from "./components/dashboard_produksi_pendapatan";
 import { DataLTK } from './components/data_biaya_ltk';
 import { DataPendapatan } from './components/data_pendapatan';
+import { DataMitra } from "./components/data_mitra";
 
 const dataCards = [
     {
@@ -154,6 +155,9 @@ const ManajemenAPI: NextPage = () => {
                     </Container>
                     <Container>
                         <DataLTK />
+                    </Container>
+                    <Container>
+                        <DataMitra />
                     </Container>
                 </div>
                 <div className="col-span-2 grid items-start gap-6 mt-6 md:mt-0 lg:col-span-1">
