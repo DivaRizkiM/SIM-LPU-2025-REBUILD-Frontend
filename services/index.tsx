@@ -1470,6 +1470,14 @@ export const syncLtk = (
     ResponseAPI
   >(`/syncLtk${payload}`);
 };
+export const syncMitraLpu = (
+  router: AppRouterInstance,
+  payload: any
+) => {
+  return UseGuardInstance(router).get<
+    ResponseAPI
+  >(`/syncMitraLpu${payload}`);
+};
 export const syncProduksiNasional = (
   router: AppRouterInstance,
   payload: any
