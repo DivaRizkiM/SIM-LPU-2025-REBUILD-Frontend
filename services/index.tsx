@@ -1582,6 +1582,16 @@ export const getJumlahLPU = (
     `/kpc-count${payload}`
   );
 }
+export const getJumlahMitraLPU = (
+  router: AppRouterInstance,
+  payload: any,
+) => {
+  return UseGuardInstance(router).get<
+    ResponseAPI
+  >(
+    `/mitra-count${payload}`
+  );
+}
 //Sync Log
 export const getAllUserLog = (
   router: AppRouterInstance,
