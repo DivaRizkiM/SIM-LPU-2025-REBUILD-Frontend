@@ -17,7 +17,7 @@ import { DataLampiranBiaya } from "./components/lampiran_biaya";
 import { DataDashboardProduksiPendapatan } from "./components/dashboard_produksi_pendapatan";
 import { DataLTK } from './components/data_biaya_ltk';
 import { DataPendapatan } from './components/data_pendapatan';
-import { DataMitra } from "./components/data_mitra";
+import { DataMitraLpu, DataMitraLPU } from "./components/data_mitra";
 
 const dataCards = [
     {
@@ -157,7 +157,7 @@ const ManajemenAPI: NextPage = () => {
                         <DataLTK />
                     </Container>
                     <Container>
-                        <DataMitra />
+                        <DataMitraLpu />
                     </Container>
                 </div>
                 <div className="col-span-2 grid items-start gap-6 mt-6 md:mt-0 lg:col-span-1">
