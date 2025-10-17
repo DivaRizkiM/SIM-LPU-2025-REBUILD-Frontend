@@ -1,3 +1,5 @@
+"use client";
+
 import { FC, useMemo, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
@@ -8,13 +10,14 @@ import { context } from "../../../../../store";
 import PopupDetail from "./PopupDetail";
 import { KPCKoordinat } from "../../../../../services/types";
 
-// Batas kasar Indonesia untuk validasi cepat
 const IND_BOUNDS = { minLat: -11.0, maxLat: 6.0, minLng: 95.0, maxLng: 141.0 };
 const indonesiaCenter: L.LatLngExpression = [-2.548926, 118.014863];
 
 interface MapsI {
   dataSource: Array<KPCKoordinat>;
   isLoading: boolean;
+  /** lpu | lpk | mitra | penyelenggara */
+  currentType?: string;
 }
 
 const toFloat = (v: unknown): number | null => {
@@ -34,51 +37,57 @@ const inIndonesia = (lat: number, lng: number) =>
   lng >= IND_BOUNDS.minLng &&
   lng <= IND_BOUNDS.maxLng;
 
-/**
- * Normalisasi satu titik:
- * - parse angka
- * - deteksi bila lat/lng kebalik (pakai heuristik batas Indonesia)
- * - kembalikan null kalau tetap tidak valid
- */
 const normalizePoint = (rawLat: unknown, rawLng: unknown) => {
   const lat1 = toFloat(rawLat);
   const lng1 = toFloat(rawLng);
-
-  // Tidak ada angka
   if (lat1 === null || lng1 === null) return null;
 
-  // Kalau keduanya valid secara global
   if (isValidLat(lat1) && isValidLng(lng1)) {
-    // case 1: sudah benar dan ada di Indonesia
-    if (inIndonesia(lat1, lng1)) {
+    if (inIndonesia(lat1, lng1))
       return { lat: lat1, lng: lng1, swapped: false };
-    }
-    // case 2: coba swap
-    if (isValidLat(lng1) && isValidLng(lat1) && inIndonesia(lng1, lat1)) {
+    if (isValidLat(lng1) && isValidLng(lat1) && inIndonesia(lng1, lat1))
       return { lat: lng1, lng: lat1, swapped: true };
-    }
   }
-
-  // Kasus data mentah sering salah taruh: long=-6.xxx, lat=106.xxx (kebalik)
-  // Coba paksa swap jika memenuhi batas Indonesia
-  if (isValidLat(lng1) && isValidLng(lat1) && inIndonesia(lng1, lat1)) {
+  if (isValidLat(lng1) && isValidLng(lat1) && inIndonesia(lng1, lat1))
     return { lat: lng1, lng: lat1, swapped: true };
-  }
 
-  // Masih tidak masuk akal → buang
   return null;
 };
 
-const getIcon = () =>
-  L.icon({
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+// default (biru)
+const baseIconUrl =
+  "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png";
+const shadowUrl =
+  "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png";
+// hijau untuk mitra
+const greenIconUrl =
+  "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png";
+// merah (opsional) untuk penyelenggara lain
+const redIconUrl =
+  "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png";
+
+const iconCache: Record<string, L.Icon> = {};
+
+const getIcon = (type?: string) => {
+  const key = (type || "default").toLowerCase();
+  if (iconCache[key]) return iconCache[key];
+
+  let iconUrl = baseIconUrl;
+  if (key === "mitra") iconUrl = greenIconUrl;
+  else if (key === "penyelenggara") iconUrl = redIconUrl;
+
+  iconCache[key] = L.icon({
+    iconUrl,
+    shadowUrl,
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
     shadowSize: [41, 41],
   });
+  return iconCache[key];
+};
 
-const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
+const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
   const ctx = context();
 
   const points = useMemo(() => {
@@ -90,9 +99,11 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
     for (let i = 0; i < (dataSource ?? []).length; i++) {
       const d: any = (dataSource as any[])[i];
 
-      // Ambil field yang dikirim BE
-      const rawLat = d?.koordinat_latitude ?? d?.latitude;
-      const rawLng = d?.koordinat_longitude ?? d?.longitude;
+      // Koordinat dari BE (nama kolom diseragamkan di API)
+      const rawLat =
+        d?.koordinat_latitude ?? d?.latitude ?? d?.lat ?? d?.koordinat_lat;
+      const rawLng =
+        d?.koordinat_longitude ?? d?.longitude ?? d?.long ?? d?.koordinat_lng;
 
       const norm = normalizePoint(rawLat, rawLng);
       if (!norm) continue;
@@ -101,7 +112,15 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
       if (norm.swapped) swapped++;
 
       const key = d?.id_kpc ?? d?.id ?? `${norm.lat},${norm.lng},${i}`;
-      const nama = d?.nama ?? d?.nama_kpc ?? d?.nama_kantor ?? "Tanpa Nama";
+      const nama =
+        d?.nama ??
+        d?.nama_kpc ??
+        d?.nama_kantor ??
+        d?.nama_mitra ??
+        "Tanpa Nama";
+
+      // sumber/tipe—BE untuk mitra mengirim 'sumber' = 'mitra'
+      const type = (d?.sumber as string) || (currentType as string) || "lpu"; // default KPC
 
       out.push({
         ...d,
@@ -109,12 +128,10 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
         __lng: norm.lng,
         __key: key,
         __nama: nama,
+        __type: type,
       });
     }
 
-    // Ringkasan di console untuk debug cepat
-    // (Akan terlihat berapa yang terswap & terpasang)
-    // eslint-disable-next-line no-console
     console.log(
       "[MAPS] total:",
       total,
@@ -127,21 +144,25 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
     );
 
     return out;
-  }, [dataSource]);
+  }, [dataSource, currentType]);
 
-  const onClickDetail = (data: KPCKoordinat) => {
+  const onClickDetail = (data: KPCKoordinat | any) => {
+    // Selipkan type_penyelenggara agar PopupDetail bisa hit endpoint show dengan benar
+    const payload = {
+      ...data,
+      type_penyelenggara: data?.__type || currentType || "lpu",
+    };
     ctx.dispatch({
       isModal: {
-        title: "Detail KCP",
+        title: "Detail Lokasi",
         type: "modal",
-        component: <PopupDetail data={data} />,
+        component: <PopupDetail data={payload} />,
       },
     });
   };
 
-  // Optional: fokus ke Indonesia saat mount
   useEffect(() => {
-    // nothing
+    // no-op
   }, []);
 
   return (
@@ -155,23 +176,25 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading }) => {
 
       <MarkerClusterGroup chunkedLoading>
         {!isLoading &&
-          points.map((kpc: any) => (
+          points.map((row: any) => (
             <Marker
-              key={kpc.__key}
-              position={[kpc.__lat, kpc.__lng]}
-              icon={getIcon()}
+              key={row.__key}
+              position={[row.__lat, row.__lng]}
+              icon={getIcon(row.__type)}
             >
               <Popup>
                 <div>
-                  <strong>{kpc.__nama}</strong>
+                  <strong>{row.__nama}</strong>
                   <br />
-                  Provinsi ID: {kpc.id_provinsi ?? "-"}
+                  Provinsi ID: {row.id_provinsi ?? "-"}
+                  <br />
+                  <small>Tipe: {row.__type || "lpu"}</small>
                 </div>
                 <div className="flex justify-center mt-3">
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => onClickDetail(kpc)}
+                    onClick={() => onClickDetail(row)}
                   >
                     Lihat Detail
                   </Button>
