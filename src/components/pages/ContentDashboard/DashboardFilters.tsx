@@ -12,9 +12,6 @@ import { ChevronsUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
-  getProvinsi,
-  getKabKota,
-  getKecamatan, // pastikan tersedia di services
   getRegional,
   getKPRKByRegional, // KCU by Regional
   getKpcByKcu, // KCP by KCU
@@ -71,32 +68,19 @@ export const DashboardFilters: FC<{
   const [isRegionalLoading, setIsRegionalLoading] = useState(false);
   const [isKcuLoading, setIsKcuLoading] = useState(false);
   const [isKcpLoading, setIsKcpLoading] = useState(false);
-  const [isProvLoading, setIsProvLoading] = useState(false);
-  const [isKabLoading, setIsKabLoading] = useState(false);
-  const [isKecLoading, setIsKecLoading] = useState(false);
 
   const [regionalOptions, setRegionalOptions] = useState<Option[]>([]);
   const [kcuOptions, setKcuOptions] = useState<Option[]>([]);
   const [kcpOptions, setKcpOptions] = useState<Option[]>([]);
-  const [provinsiOptions, setProvinsiOptions] = useState<Option[]>([]);
-  const [kabOptions, setKabOptions] = useState<Option[]>([]);
-  const [kecOptions, setKecOptions] = useState<Option[]>([]);
 
   // init: Provinsi + Regional
   useEffect(() => {
     (async () => {
       setIsInitLoading(true);
       try {
-        const [provRes, regRes] = await Promise.all([
-          getProvinsi(router, "?limit=999"),
+        const [regRes] = await Promise.all([
           getRegional(router, "?limit=99"),
         ]);
-
-        const provinces = (provRes.data.data as ProvinsiI[]).map((i) => ({
-          value: i.id.toString(),
-          label: i.nama,
-        }));
-        provinces.unshift({ value: "", label: "Semua Provinsi" });
 
         const regionals = (regRes.data.data as RegionalI[]).map((i) => ({
           value: i.id.toString(),
@@ -104,7 +88,6 @@ export const DashboardFilters: FC<{
         }));
         regionals.unshift({ value: "", label: "Semua Regional" });
 
-        setProvinsiOptions(provinces);
         setRegionalOptions(regionals);
       } catch (e) {
         console.error("init filters error:", e);
@@ -151,51 +134,11 @@ export const DashboardFilters: FC<{
     }
   };
 
-  // chain: Provinsi -> Kab/Kota
-  const loadKab = async (provId: string) => {
-    setIsKabLoading(true);
-    try {
-      const res = await getKabKota(router, `?id_provinsi=${provId}`);
-      const kabs = (res.data.data as KabKotaI[]).map((i) => ({
-        value: i.id.toString(),
-        label: i.nama,
-      }));
-      kabs.unshift({ value: "", label: "Semua Kab/Kota" });
-      setKabOptions(kabs);
-    } catch (e) {
-      console.error("loadKab error:", e);
-    } finally {
-      setTimeout(() => setIsKabLoading(false), 300);
-    }
-  };
-
-  // chain: Kab/Kota -> Kecamatan
-  const loadKec = async (kabId: string) => {
-    setIsKecLoading(true);
-    try {
-      const res = await getKecamatan(router, `?id_kabupaten_kota=${kabId}`);
-      const kecs = (res.data.data as KecamatanI[]).map((i) => ({
-        value: i.id.toString(),
-        label: i.nama,
-      }));
-      kecs.unshift({ value: "", label: "Semua Kecamatan" });
-      setKecOptions(kecs);
-    } catch (e) {
-      console.error("loadKec error:", e);
-    } finally {
-      setTimeout(() => setIsKecLoading(false), 300);
-    }
-  };
   const buildParams = (v: DashboardFilterValues) => {
     const p: QueryParams = {};
     if (v.id_regional && v.id_regional !== " ") p.id_regional = v.id_regional;
     if (v.id_kprk && v.id_kprk !== " ") p.id_kprk = v.id_kprk;
     if (v.id_kpc && v.id_kpc !== " ") p.id_kpc = v.id_kpc;
-    if (v.id_provinsi && v.id_provinsi !== " ") p.id_provinsi = v.id_provinsi;
-    if (v.id_kabupaten_kota && v.id_kabupaten_kota !== " ")
-      p.id_kabupaten_kota = v.id_kabupaten_kota;
-    if (v.id_kecamatan && v.id_kecamatan !== " ")
-      p.id_kecamatan = v.id_kecamatan;
     return buildQueryParam(p) || "";
   };
 
@@ -304,74 +247,6 @@ export const DashboardFilters: FC<{
                 </FormItem>
               )}
             />
-
-            {/* PROVINSI */}
-            <FormField
-              control={form.control}
-              name="id_provinsi"
-              render={({ field }) => (
-                <FormItem>
-                  <Combobox
-                    options={provinsiOptions}
-                    placeholder="Pilih Provinsi"
-                    value={field.value}
-                    onSelect={(v) => {
-                      form.setValue("id_provinsi", v);
-                      form.setValue("id_kabupaten_kota", "");
-                      form.setValue("id_kecamatan", "");
-                      setKabOptions([]);
-                      setKecOptions([]);
-                      if (v) loadKab(v);
-                    }}
-                    isLoading={isInitLoading /* || isProvLoading */}
-                    disabled={provinsiOptions.length === 0}
-                  />
-                </FormItem>
-              )}
-            />
-
-            {/* KAB/KOTA */}
-            <FormField
-              control={form.control}
-              name="id_kabupaten_kota"
-              render={({ field }) => (
-                <FormItem>
-                  <Combobox
-                    options={kabOptions}
-                    placeholder="Pilih Kab/Kota"
-                    value={field.value}
-                    onSelect={(v) => {
-                      form.setValue("id_kabupaten_kota", v);
-                      form.setValue("id_kecamatan", "");
-                      setKecOptions([]);
-                      if (v) loadKec(v);
-                    }}
-                    isLoading={isKabLoading}
-                    disabled={kabOptions.length === 0}
-                  />
-                </FormItem>
-              )}
-            />
-
-            {/* KECAMATAN */}
-            <FormField
-              control={form.control}
-              name="id_kecamatan"
-              render={({ field }) => (
-                <FormItem>
-                  <Combobox
-                    options={kecOptions}
-                    placeholder="Pilih Kecamatan"
-                    value={field.value}
-                    onSelect={(v) => form.setValue("id_kecamatan", v)}
-                    isLoading={isKecLoading}
-                    disabled={kecOptions.length === 0}
-                  />
-                </FormItem>
-              )}
-            />
-
-            {/* HAPUS tombol submit di dalam form (yang awalnya ada di bawah grid) */}
           </form>
         </Form>
       </div>
