@@ -40,8 +40,8 @@ import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
 const list_tipe_penyelenggara = [
-  { value: "lpu", label: "LPU" },
-  { value: "lpk", label: "LPK" },
+  { value: "lpu", label: "LPU/LPK (KCP)" },
+  { value: "mitra", label: "Mitra LPU" }, // NEW
   { value: "penyelenggara", label: "Penyelenggara POS Lainnya" },
 ];
 
@@ -60,11 +60,9 @@ const FormSchema = z.object({
   id_kpc: z.string().optional(),
 });
 
-type TipePenyelenggara = "lpu" | "lpk" | "penyelenggara";
+type TipePenyelenggara = "lpu" | "mitra" | "penyelenggara";
 
-const MapsComp = dynamic(() => import("./maps"), {
-  ssr: false,
-});
+const MapsComp = dynamic(() => import("./maps"), { ssr: false });
 
 const Monitoring: NextPage = () => {
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -96,21 +94,16 @@ const Monitoring: NextPage = () => {
     useState<TipePenyelenggara>("lpu");
   const [isFilterHidden, setIsFilterHidden] = useState<boolean>(false);
 
+  // filter yang tampil per tipe
   const filterOptionsMap: Record<TipePenyelenggara, string[]> = {
     lpu: ["provinsi", "kabupaten/kota", "regional", "kprk", "kpc"],
-    lpk: [
-      "penyelenggara",
-      "provinsi",
-      "kabupaten/kota",
-      "regional",
-      "kprk",
-      "kpc",
-    ],
+    // mitra: cukup regional; tapi biarin dukung kprk/kpc juga kalau mau dipersempit
+    mitra: ["provinsi", "kabupaten/kota", "regional", "kprk", "kpc"],
     penyelenggara: ["penyelenggara", "provinsi", "kabupaten/kota"],
   };
 
   const updatePenyelenggaraOptions = (type: string) => {
-    if (type === "lpk" || type === "penyelenggara") {
+    if (type === "penyelenggara") {
       setPenyelenggaraOptions(list_penyelenggara);
     } else {
       setPenyelenggaraOptions([]);
@@ -126,7 +119,7 @@ const Monitoring: NextPage = () => {
     try {
       const [provRes, kpcKoors, regionalsRes] = await Promise.all([
         getProvinsi(router, "?limit=999"),
-        getKpcKoordinat(router, "?limit=2265"),
+        getKpcKoordinat(router, "?limit=2265"), // default lpu
         getRegional(router, "?limit=99"),
       ]);
 
@@ -145,7 +138,7 @@ const Monitoring: NextPage = () => {
       setProvinsiOptions(provinces);
       setRegionalOptions(regionals);
       setDataSource(kpcKoors.data.data);
-      setPenyelenggaraOptions(list_penyelenggara);
+      setPenyelenggaraOptions([]); // default lpu, ga perlu pilih penyelenggara
     } catch (err) {
       console.error("Init error: ", err);
     } finally {
@@ -165,7 +158,7 @@ const Monitoring: NextPage = () => {
     setIsLoading(true);
 
     const tempParams: QueryParams = {};
-    tempParams.limit = "2265";
+    tempParams.limit = "5000";
 
     if (tipe_penyelenggara && tipe_penyelenggara !== " ") {
       tempParams.type_penyelenggara = tipe_penyelenggara;
@@ -186,8 +179,7 @@ const Monitoring: NextPage = () => {
       tempParams.id_kprk = id_kprk;
     }
     if (id_kpc && id_kpc !== " ") {
-      // Selalu kirim id_kpc (BE sudah support untuk kedua cabang)
-      tempParams.id_kpc = id_kpc;
+      tempParams.id_kpc = id_kpc; // BE support LPU/LPK & mitra (mitra pakai NOPEND->KPC join)
     }
 
     const params = buildQueryParam(tempParams) || "";
@@ -322,7 +314,7 @@ const Monitoring: NextPage = () => {
                         setSelectedTipePenyelenggara(
                           value as TipePenyelenggara
                         );
-                      }, 500);
+                      }, 200);
                     }}
                     value={field.value}
                   >
@@ -464,7 +456,7 @@ const Monitoring: NextPage = () => {
                   <FormItem>
                     <Combobox
                       options={kcpOptions}
-                      placeholder="Pilih KPC"
+                      placeholder="Pilih KCP"
                       value={field.value}
                       isLoading={isKcpLoading}
                       onSelect={(e) => form.setValue("id_kpc", e)}
@@ -483,7 +475,11 @@ const Monitoring: NextPage = () => {
       </div>
 
       <div className="relative z-0">
-        <MapsComp dataSource={dataSource} isLoading={isLoading} />
+        <MapsComp
+          dataSource={dataSource}
+          isLoading={isLoading}
+          currentType={selectedTipePenyelenggara}
+        />
       </div>
     </div>
   );
