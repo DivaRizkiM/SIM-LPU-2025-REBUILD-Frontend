@@ -65,9 +65,9 @@ export function Overview({ data }: BarCompI) {
 
         <Bar
           dataKey="value"
-          fill="currentColor"
           radius={[4, 4, 0, 0]}
-          className="fill-primary"
+          style={{ fill: "#FB8500" }} // inline style > CSS
+          fillOpacity={0.9}
         />
       </BarChart>
     </ResponsiveContainer>
