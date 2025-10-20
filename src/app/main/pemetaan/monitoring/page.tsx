@@ -21,6 +21,8 @@ import {
   getKpcKoordinat,
   getProvinsi,
   getRegional,
+  // ✅ pastikan ada di services-mu
+  getKecamatan,
 } from "../../../../../services";
 import {
   KPCKoordinat,
@@ -41,7 +43,7 @@ import dynamic from "next/dynamic";
 
 const list_tipe_penyelenggara = [
   { value: "lpu", label: "LPU/LPK (KCP)" },
-  { value: "mitra", label: "Mitra LPU" }, // NEW
+  { value: "mitra", label: "Mitra LPU" },
   { value: "penyelenggara", label: "Penyelenggara POS Lainnya" },
 ];
 
@@ -55,6 +57,7 @@ const FormSchema = z.object({
   id_penyelenggara: z.string().optional(),
   id_provinsi: z.string().optional(),
   id_kabupaten_kota: z.string().optional(),
+  id_kecamatan: z.string().optional(), // ✅ baru
   id_regional: z.string().optional(),
   id_kprk: z.string().optional(),
   id_kpc: z.string().optional(),
@@ -73,6 +76,7 @@ const Monitoring: NextPage = () => {
   const [dataSource, setDataSource] = useState<Array<KPCKoordinat>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isKotaLoading, setIsKotaLoading] = useState<boolean>(false);
+  const [isKecLoading, setIsKecLoading] = useState<boolean>(false);
   const [isKcuLoading, setIsKcuLoading] = useState<boolean>(false);
   const [isKcpLoading, setIskcpLoading] = useState<boolean>(false);
 
@@ -85,6 +89,9 @@ const Monitoring: NextPage = () => {
   const [kabKotaOptions, setKabKotaOptions] = useState<Array<FormCustomOption>>(
     []
   );
+  const [kecamatanOptions, setKecamatanOptions] = useState<
+    Array<FormCustomOption>
+  >([]); // ✅ baru
   const [penyelenggaraOptions, setPenyelenggaraOptions] = useState<
     Array<FormCustomOption>
   >([]);
@@ -94,12 +101,17 @@ const Monitoring: NextPage = () => {
     useState<TipePenyelenggara>("lpu");
   const [isFilterHidden, setIsFilterHidden] = useState<boolean>(false);
 
-  // filter yang tampil per tipe
   const filterOptionsMap: Record<TipePenyelenggara, string[]> = {
-    lpu: ["provinsi", "kabupaten/kota", "regional", "kprk", "kpc"],
-    // mitra: cukup regional; tapi biarin dukung kprk/kpc juga kalau mau dipersempit
-    mitra: ["provinsi", "kabupaten/kota", "regional", "kprk", "kpc"],
-    penyelenggara: ["penyelenggara", "provinsi", "kabupaten/kota"],
+    lpu: ["provinsi", "kabupaten/kota", "kecamatan", "regional", "kprk", "kpc"],
+    mitra: [
+      "provinsi",
+      "kabupaten/kota",
+      "kecamatan",
+      "regional",
+      "kprk",
+      "kpc",
+    ],
+    penyelenggara: ["penyelenggara", "provinsi", "kabupaten/kota", "kecamatan"],
   };
 
   const updatePenyelenggaraOptions = (type: string) => {
@@ -119,7 +131,7 @@ const Monitoring: NextPage = () => {
     try {
       const [provRes, kpcKoors, regionalsRes] = await Promise.all([
         getProvinsi(router, "?limit=999"),
-        getKpcKoordinat(router, "?limit=2265"), // default lpu
+        getKpcKoordinat(router, "?limit=5000"),
         getRegional(router, "?limit=99"),
       ]);
 
@@ -138,7 +150,7 @@ const Monitoring: NextPage = () => {
       setProvinsiOptions(provinces);
       setRegionalOptions(regionals);
       setDataSource(kpcKoors.data.data);
-      setPenyelenggaraOptions([]); // default lpu, ga perlu pilih penyelenggara
+      setPenyelenggaraOptions([]);
     } catch (err) {
       console.error("Init error: ", err);
     } finally {
@@ -151,6 +163,7 @@ const Monitoring: NextPage = () => {
     id_penyelenggara = "",
     id_provinsi = "",
     id_kabupaten_kota = "",
+    id_kecamatan = "",
     id_regional = "",
     id_kprk = "",
     id_kpc = ""
@@ -172,6 +185,9 @@ const Monitoring: NextPage = () => {
     if (id_kabupaten_kota && id_kabupaten_kota !== " ") {
       tempParams.id_kabupaten_kota = id_kabupaten_kota;
     }
+    if (id_kecamatan && id_kecamatan !== " ") {
+      tempParams.id_kecamatan = id_kecamatan;
+    }
     if (id_regional && id_regional !== " ") {
       tempParams.id_regional = id_regional;
     }
@@ -179,7 +195,7 @@ const Monitoring: NextPage = () => {
       tempParams.id_kprk = id_kprk;
     }
     if (id_kpc && id_kpc !== " ") {
-      tempParams.id_kpc = id_kpc; // BE support LPU/LPK & mitra (mitra pakai NOPEND->KPC join)
+      tempParams.id_kpc = id_kpc;
     }
 
     const params = buildQueryParam(tempParams) || "";
@@ -204,6 +220,7 @@ const Monitoring: NextPage = () => {
       id_penyelenggara,
       id_provinsi,
       id_kabupaten_kota,
+      id_kecamatan,
       id_regional,
       id_kprk,
       id_kpc,
@@ -214,6 +231,7 @@ const Monitoring: NextPage = () => {
       id_penyelenggara,
       id_provinsi,
       id_kabupaten_kota,
+      id_kecamatan,
       id_regional,
       id_kprk,
       id_kpc
@@ -222,9 +240,11 @@ const Monitoring: NextPage = () => {
 
   const getKotaByProvince = async (id: string | number) => {
     setIsKotaLoading(true);
-    if (form.getValues("id_kabupaten_kota")) {
-      form.setValue("id_kabupaten_kota", "");
-    }
+    // reset turunan
+    form.setValue("id_kabupaten_kota", "");
+    form.setValue("id_kecamatan", "");
+    setKecamatanOptions([]);
+
     try {
       const response = await getKabKota(router, `?id_provinsi=${id}`);
       const kabKotas = (response.data.data as KabKotaI[]).map((item) => ({
@@ -236,7 +256,25 @@ const Monitoring: NextPage = () => {
     } catch (error) {
       console.error("Err: ", error);
     } finally {
-      setTimeout(() => setIsKotaLoading(false), 500);
+      setTimeout(() => setIsKotaLoading(false), 400);
+    }
+  };
+
+  const getKecamatanByKabKota = async (id: string | number) => {
+    setIsKecLoading(true);
+    form.setValue("id_kecamatan", "");
+    try {
+      const res = await getKecamatan(router, `?id_kabupaten_kota=${id}`);
+      const kecs = (res.data.data as any[]).map((item) => ({
+        value: String(item.id),
+        label: item.nama,
+      }));
+      kecs.unshift({ value: "", label: "Pilih Semua Kecamatan" });
+      setKecamatanOptions(kecs);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsKecLoading(false), 400);
     }
   };
 
@@ -253,7 +291,7 @@ const Monitoring: NextPage = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setTimeout(() => setIsKcuLoading(false), 500);
+      setTimeout(() => setIsKcuLoading(false), 400);
     }
   };
 
@@ -271,7 +309,7 @@ const Monitoring: NextPage = () => {
     } catch (error) {
       console.error("Err: ", error);
     } finally {
-      setTimeout(() => setIskcpLoading(false), 500);
+      setTimeout(() => setIskcpLoading(false), 400);
     }
   };
 
@@ -314,7 +352,7 @@ const Monitoring: NextPage = () => {
                         setSelectedTipePenyelenggara(
                           value as TipePenyelenggara
                         );
-                      }, 200);
+                      }, 150);
                     }}
                     value={field.value}
                   >
@@ -394,13 +432,37 @@ const Monitoring: NextPage = () => {
                     options={kabKotaOptions}
                     placeholder="Pilih Kab/Kota"
                     value={field.value}
-                    onSelect={(e) => form.setValue("id_kabupaten_kota", e)}
+                    onSelect={(e) => {
+                      form.setValue("id_kabupaten_kota", e);
+                      getKecamatanByKabKota(e);
+                    }}
                     isLoading={isKotaLoading || isLoading}
                     disabled={kabKotaOptions.length === 0 || isLoading}
                   />
                 </FormItem>
               )}
             />
+
+            {filterOptionsMap[selectedTipePenyelenggara].includes(
+              "kecamatan"
+            ) && (
+              <FormField
+                control={form.control}
+                name="id_kecamatan"
+                render={({ field }) => (
+                  <FormItem>
+                    <Combobox
+                      options={kecamatanOptions}
+                      placeholder="Pilih Kecamatan"
+                      value={field.value}
+                      onSelect={(e) => form.setValue("id_kecamatan", e)}
+                      isLoading={isKecLoading}
+                      disabled={kecamatanOptions.length === 0 || isKecLoading}
+                    />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {filterOptionsMap[selectedTipePenyelenggara].includes(
               "regional"
@@ -468,7 +530,7 @@ const Monitoring: NextPage = () => {
             )}
 
             <div className="col-span-2 flex justify-end">
-              <Button type="submit">Submit</Button>
+              <Button type="submit">Terapkan</Button>
             </div>
           </form>
         </Form>
