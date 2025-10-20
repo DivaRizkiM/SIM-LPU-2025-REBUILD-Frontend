@@ -19,8 +19,8 @@ const chartConfig = {
     label: "Layanan Berbasis Fee",
     color: "#374151",
   },
-  'LAYANAN POS KOMERSIAL': {
-    label: "Layanan Pos Komersial",
+  'LAYANAN POS KOMERSIL': {
+    label: "Layanan Pos Komersil",
     color: "#374151",
   },
   'LAYANAN POS UNIVERSAL': {
@@ -52,7 +52,6 @@ export function PieChartDonut({data}:PieChartDonutI) {
                     data={data.data}
                     dataKey="value"
                     nameKey="category"
-                    label={labelFormatter}
                     innerRadius={60}
                 >
                 </Pie>
