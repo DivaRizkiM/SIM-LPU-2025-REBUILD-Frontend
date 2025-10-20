@@ -66,7 +66,6 @@ export function PieChartComponent({data}:PieChartComponentI) {
             <Pie 
               data={data.data} 
               dataKey="value" 
-              label={labelFormatter}
               nameKey="category" 
             />
             <ChartLegend

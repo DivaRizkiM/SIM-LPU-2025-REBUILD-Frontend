@@ -1,47 +1,100 @@
 // components/GaugeChart.tsx
-import { GaugeChartProps } from '@/lib/types';
-import React from 'react';
+import React from "react";
+import { GaugeChartProps } from "@/lib/types";
 
 interface GaugeI {
-    data: GaugeChartProps
+  data: GaugeChartProps & {
+    thickness?: number;          // ketebalan arc (px)
+    trackColor?: string;         // warna background
+    progressColor?: string;      // warna progress
+    showLabel?: boolean;         // tampilkan teks di tengah
+    label?: string;              // teks bawah (opsional)
+    className?: string;
+  };
 }
-const GaugeChart: React.FC<GaugeI> = ({ data }) => {
-    const {
-        value = 0, 
-        min = 0, 
-        max = 100
-    } = data
-    const angle = ((value - min) / (max - min)) * 180;
-    const needleStyle = {
-        transform: `rotate(${angle - 90}deg)`,
-        transformOrigin: 'bottom center',
-    };
 
-    return (
-        <div className="relative w-64 h-32 mt-10">
-            <div className="relative w-64 h-32 overflow-hidden mx-auto">
-                <div className="w-64 h-64 aspect-square border-[35px] border-blue-500 rounded-full absolute top-0 left-0 transform"></div>
-                <div className="absolute inset-0 flex justify-center items-center">
-                {/* <div className="text-white font-bold text-xl">50%</div> */}
-                </div>
+const GaugeChart: React.FC<GaugeI> = ({ data }) => {
+  const {
+    value = 0,
+    min = 0,
+    max = 100,
+    thickness = 12,
+    trackColor = "#FFB703",      // biru 10% (rgba hex)
+    progressColor = "#FB8500",     // biru muda
+    showLabel = true,
+    className = "",
+  } = data;
+
+  const safe = Math.max(min, Math.min(value, max));
+  const pct = (safe - min) / (max - min); // 0..1
+
+  // Ukuran SVG (100x100), kita clip jadi setengah atas
+  const r = 42; // radius
+  const C = 2 * Math.PI * r;
+  const halfC = C / 2;
+  const dashArray = halfC;
+  const dashOffset = halfC - halfC * pct;
+
+  return (
+    <div className={`relative w-64 h-32 ${className}`}>
+      <svg
+        viewBox="0 0 100 60"
+        className="w-full h-full block"
+        aria-label={`Gauge ${Math.round(pct * 100)}%`}
+      >
+        {/* tampilkan hanya setengah atas */}
+        <defs>
+          <clipPath id="half">
+            <rect x="0" y="0" width="100" height="50" />
+          </clipPath>
+        </defs>
+
+        <g clipPath="url(#half)" transform="translate(0,0)">
+          {/* Track (background) */}
+          <circle
+            cx="50"
+            cy="50"
+            r={r}
+            fill="transparent"
+            stroke={trackColor}
+            strokeWidth={thickness}
+            strokeLinecap="round"
+            strokeDasharray={dashArray + " " + C}
+            strokeDashoffset={0}
+            transform="rotate(180 50 50)" // mulai dari kiri
+          />
+
+          {/* Progress */}
+          <circle
+            cx="50"
+            cy="50"
+            r={r}
+            fill="transparent"
+            stroke={progressColor}
+            strokeWidth={thickness}
+            strokeLinecap="round"
+            strokeDasharray={dashArray + " " + C}
+            strokeDashoffset={dashOffset}
+            transform="rotate(180 50 50)"
+            style={{
+              transition: "stroke-dashoffset 600ms ease-in-out",
+            }}
+          />
+        </g>
+      </svg>
+
+      {/* Value + label di tengah */}
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-4">
+        {showLabel && (
+          <>
+            <div className="text-3xl font-semibold tabular-nums">
+              {value}%
             </div>
-        
-        <div
-            className="absolute left-1/2 bottom-0 w-1 h-16 bg-gray-700"
-            style={needleStyle}
-        ></div>
-        <div className="absolute top-0 -translate-x-1/2 left-1/2 flex justify-center items-center">
-            <div className="text-center">
-            <div  className='text-sm mt-2 text-white'>50%</div>
-            </div>
-        </div>
-        <div className="absolute left-0 bottom-0 flex flex-nowrap justify-between w-full px-2">
-            <span className='text-sm text-white'>0</span>
-            <span className="text-xl absolute mt-6 left-1/2 -translate-x-1/2">{value}%</span>
-            <span className='text-sm  absolute right-0 text-white'>100%</span>
-        </div>
-        </div>
-    );
+          </>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default GaugeChart;
