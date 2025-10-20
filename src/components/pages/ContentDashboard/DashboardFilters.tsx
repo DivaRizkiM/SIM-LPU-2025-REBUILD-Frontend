@@ -1,8 +1,8 @@
 "use client";
 
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { Form, FormField, FormItem } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import { RegionalI } from "../../../app/main/referensi/regional/columns";
 import { kcuI } from "../../../app/main/referensi/kc-kcu/columns";
 import { ProfilKcpI } from "../../../app/main/profilKCP/columns";
 import { QueryParams, buildQueryParam } from "../../../../helper";
-import { KabKotaI, KecamatanI, ProvinsiI } from "../../../../services/types";
 
 type Option = { value: string; label: string };
 
@@ -65,7 +64,6 @@ export const DashboardFilters: FC<{
   const [isFilterHidden, setIsFilterHidden] = useState(false);
 
   const [isInitLoading, setIsInitLoading] = useState(true);
-  const [isRegionalLoading, setIsRegionalLoading] = useState(false);
   const [isKcuLoading, setIsKcuLoading] = useState(false);
   const [isKcpLoading, setIsKcpLoading] = useState(false);
 
@@ -73,14 +71,11 @@ export const DashboardFilters: FC<{
   const [kcuOptions, setKcuOptions] = useState<Option[]>([]);
   const [kcpOptions, setKcpOptions] = useState<Option[]>([]);
 
-  // init: Provinsi + Regional
   useEffect(() => {
     (async () => {
       setIsInitLoading(true);
       try {
-        const [regRes] = await Promise.all([
-          getRegional(router, "?limit=99"),
-        ]);
+        const [regRes] = await Promise.all([getRegional(router, "?limit=99")]);
 
         const regionals = (regRes.data.data as RegionalI[]).map((i) => ({
           value: i.id.toString(),
@@ -89,6 +84,15 @@ export const DashboardFilters: FC<{
         regionals.unshift({ value: "", label: "Semua Regional" });
 
         setRegionalOptions(regionals);
+
+        // jika defaultValues punya regional/kcu/kcp, load berantai
+        const dv = { ...form.getValues(), ...defaultValues };
+        if (dv.id_regional) {
+          await loadKcu(dv.id_regional, true);
+          if (dv.id_kprk) {
+            await loadKcp(dv.id_kprk, true);
+          }
+        }
       } catch (e) {
         console.error("init filters error:", e);
       } finally {
@@ -99,8 +103,8 @@ export const DashboardFilters: FC<{
   }, []);
 
   // chain: Regional -> KCU
-  const loadKcu = async (regionalId: string) => {
-    setIsKcuLoading(true);
+  const loadKcu = async (regionalId: string, silent = false) => {
+    if (!silent) setIsKcuLoading(true);
     try {
       const res = await getKPRKByRegional(router, regionalId);
       const kcus = (res.data.data as kcuI[]).map((i) => ({
@@ -112,13 +116,13 @@ export const DashboardFilters: FC<{
     } catch (e) {
       console.error("loadKcu error:", e);
     } finally {
-      setTimeout(() => setIsKcuLoading(false), 300);
+      if (!silent) setTimeout(() => setIsKcuLoading(false), 300);
     }
   };
 
   // chain: KCU -> KCP
-  const loadKcp = async (kcuId: string) => {
-    setIsKcpLoading(true);
+  const loadKcp = async (kcuId: string, silent = false) => {
+    if (!silent) setIsKcpLoading(true);
     try {
       const res = await getKpcByKcu(router, kcuId);
       const kcps = (res.data.data as ProfilKcpI[]).map((i) => ({
@@ -130,31 +134,47 @@ export const DashboardFilters: FC<{
     } catch (e) {
       console.error("loadKcp error:", e);
     } finally {
-      setTimeout(() => setIsKcpLoading(false), 300);
+      if (!silent) setTimeout(() => setIsKcpLoading(false), 300);
     }
   };
 
   const buildParams = (v: DashboardFilterValues) => {
     const p: QueryParams = {};
-    if (v.id_regional && v.id_regional !== " ") p.id_regional = v.id_regional;
-    if (v.id_kprk && v.id_kprk !== " ") p.id_kprk = v.id_kprk;
-    if (v.id_kpc && v.id_kpc !== " ") p.id_kpc = v.id_kpc;
+    if (v.id_regional && v.id_regional !== "") p.id_regional = v.id_regional;
+    if (v.id_kprk && v.id_kprk !== "") p.id_kprk = v.id_kprk;
+    if (v.id_kpc && v.id_kpc !== "") p.id_kpc = v.id_kpc;
     return buildQueryParam(p) || "";
   };
 
-  const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    const params = buildParams(data);
-    console.log("[FILTER] raw:", data);
-    console.log("[FILTER] params:", params);
-    onApply(params, data);
-  };
+  const watched = useWatch({
+    control: form.control,
+    name: ["id_regional", "id_kprk", "id_kpc"],
+  });
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // auto-apply saat mount & setiap perubahan 3 field kunci
+    const values = form.getValues() as DashboardFilterValues;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      const params = buildParams(values);
+      onApply(params, values);
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watched?.[0], watched?.[1], watched?.[2]]);
+  // ==========================================================================
 
   return (
     <div className="relative">
       <div
         className={cn("rounded-md border bg-card/70 backdrop-blur-sm p-3 mb-4")}
       >
-        {/* HEADER: kiri judul, kanan collapse + TERAPKAN */}
+        {/* HEADER */}
         <div className="flex items-center justify-between">
           <div className="font-semibold">Filter</div>
           <div className="flex items-center gap-2">
@@ -166,17 +186,13 @@ export const DashboardFilters: FC<{
             >
               <ChevronsUp className={cn(isFilterHidden && "rotate-180")} />
             </Button>
-            {/* Tombol submit dipindah ke pojok kanan */}
-            <Button type="submit" form="dashboard-filters-form">
-              Terapkan
-            </Button>
           </div>
         </div>
 
         <Form {...form}>
           <form
-            id="dashboard-filters-form" // <<==== PENTING: id untuk tombol di header
-            onSubmit={form.handleSubmit(onSubmit)}
+            id="dashboard-filters-form"
+            onSubmit={(e) => e.preventDefault()}
             className={cn(
               "grid lg:grid-cols-3 gap-3 mt-3 transition-all",
               isFilterHidden && "h-0 overflow-hidden pointer-events-none"
@@ -192,15 +208,15 @@ export const DashboardFilters: FC<{
                     options={regionalOptions}
                     placeholder="Pilih Regional"
                     value={field.value}
-                    onSelect={(v) => {
+                    onSelect={async (v) => {
                       form.setValue("id_regional", v);
                       form.setValue("id_kprk", "");
                       form.setValue("id_kpc", "");
                       setKcuOptions([]);
                       setKcpOptions([]);
-                      if (v) loadKcu(v);
+                      if (v) await loadKcu(v);
                     }}
-                    isLoading={isInitLoading /* || isRegionalLoading */}
+                    isLoading={isInitLoading}
                     disabled={regionalOptions.length === 0}
                   />
                 </FormItem>
@@ -217,11 +233,11 @@ export const DashboardFilters: FC<{
                     options={kcuOptions}
                     placeholder="Pilih KCU"
                     value={field.value}
-                    onSelect={(v) => {
+                    onSelect={async (v) => {
                       form.setValue("id_kprk", v);
                       form.setValue("id_kpc", "");
                       setKcpOptions([]);
-                      if (v) loadKcp(v);
+                      if (v) await loadKcp(v);
                     }}
                     isLoading={isKcuLoading}
                     disabled={kcuOptions.length === 0}
