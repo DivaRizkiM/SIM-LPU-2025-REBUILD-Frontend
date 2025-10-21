@@ -17,19 +17,15 @@ import { Button } from "@/components/ui/button";
 import { context } from "../../../../../store";
 import PopupDetail from "./PopupDetail";
 import { KPCKoordinat } from "../../../../../services/types";
+import UseGuardInstance from "../../../../../services/instance";
+import { useRouter } from "next/navigation";
 
+// ====================== Konstanta
 const IND_BOUNDS = { minLat: -11.0, maxLat: 6.0, minLng: 95.0, maxLng: 141.0 };
 const indonesiaCenter: L.LatLngExpression = [-2.548926, 118.014863];
-
-// dorong kontrol Leaflet agar tidak ketutup filter bar
 const TOP_OFFSET_PX = 168;
 
-interface MapsI {
-  dataSource: Array<KPCKoordinat>;
-  isLoading: boolean;
-  currentType?: string; // lpu | lpk | mitra | penyelenggara
-}
-
+// ====================== Util koordinat
 const toFloat = (v: unknown): number | null => {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
@@ -46,8 +42,8 @@ const inIndonesia = (lat: number, lng: number) =>
   lng <= IND_BOUNDS.maxLng;
 
 const normalizePoint = (rawLat: unknown, rawLng: unknown) => {
-  const lat1 = toFloat(rawLat);
-  const lng1 = toFloat(rawLng);
+  const lat1 = toFloat(rawLat),
+    lng1 = toFloat(rawLng);
   if (lat1 === null || lng1 === null) return null;
   if (isValidLat(lat1) && isValidLng(lng1)) {
     if (inIndonesia(lat1, lng1))
@@ -60,7 +56,7 @@ const normalizePoint = (rawLat: unknown, rawLng: unknown) => {
   return null;
 };
 
-// Marker POS (oranye default, biru untuk mitra)
+// ====================== Icon marker (oranye default, biru mitra)
 const makePointerHTML = (variant: "default" | "mitra" = "default") => {
   const color = variant === "mitra" ? "#2563eb" : "#ff7a00";
   return `
@@ -83,6 +79,7 @@ const makePosIcon = (variant: "default" | "mitra" = "default") =>
     popupAnchor: [0, -36],
   });
 
+// ====================== Haversine
 const haversineKm = (a: number, b: number, c: number, d: number) => {
   const R = 6371,
     toRad = (x: number) => (x * Math.PI) / 180;
@@ -94,7 +91,150 @@ const haversineKm = (a: number, b: number, c: number, d: number) => {
   return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
 };
 
+// ====================== Row helper utk popup mini
+const RowMini: FC<{ label: string; value?: any }> = ({ label, value }) => (
+  <div className="grid grid-cols-[120px_1fr] gap-3 text-sm">
+    <span className="text-slate-600">{label}</span>
+    <span className="font-semibold break-words">{value ?? "-"}</span>
+  </div>
+);
+
+// ====================== Popup mini (lengkap seperti figma)
+const PopupMini: FC<{
+  row: any;
+  onDetail: (payload: any) => void;
+  api: any; // Axios instance (UseGuardInstance)
+}> = ({ row, onDetail, api }) => {
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<any>({});
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setErr(null);
+        setLoading(true);
+
+        const params: Record<string, string> = {
+          type_penyelenggara: row?.__type || "lpu",
+        };
+        if (row?.id_kpc || row?.id) params.id_kpc = String(row?.id_kpc || row?.id);
+        if (row?.id_rekonsiliasi) params.id_rekonsiliasi = String(row.id_rekonsiliasi);
+
+        const qs = "?" + new URLSearchParams(params).toString();
+        const r = await api.get(`/monitoring-detail${qs}`);
+        const data = r?.data?.data ?? {};
+        if (!alive) return;
+        setDetail(data);
+      } catch (e: any) {
+        if (!alive) return;
+        setErr(e?.message || "Gagal memuat detail");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // depend on id/type agar fetch ulang tepat
+  }, [row?.id_kpc, row?.id, row?.__type]);
+
+  const d: any = detail || {};
+  const namaKantor =
+    d?.__nama || d?.nama || row?.__nama || row?.nama || "Tanpa Nama";
+  const kodeDirian = d?.nomor_dirian || d?.id_kpc || d?.id || row?.id_kpc || row?.id || "-";
+  const regional = d?.nama_regional || row?.nama_regional || "-";
+  const kprk = d?.nama_kprk || row?.nama_kprk || "-";
+  const jenis = d?.jenis_kantor || row?.jenis_kantor || "-";
+  const alamat = d?.alamat || row?.alamat || "-";
+  const nama_prov = d?.nama_provinsi || d?.nama_provisi || row?.nama_provinsi || "-";
+  const nama_kab = d?.nama_kabupaten || row?.nama_kabupaten || "-";
+  const nama_kec = d?.nama_kecamatan || row?.nama_kecamatan || "-";
+  const nama_kel = d?.nama_kelurahan || row?.nama_kelurahan || "-";
+
+  const rawFiles = d?.foto || d?.pencatatan_kantor_files || d?.files || [];
+  const photos: string[] = (Array.isArray(rawFiles) ? rawFiles : [])
+    .map((f: any) => f?.url || f?.file || f?.path || "")
+    .filter(Boolean) as string[];
+
+  return (
+    <div className="text-slate-900 w-[360px]">
+      <div className="font-bold mb-2">Kantor Pos LPU</div>
+
+      {loading ? (
+        <div className="text-xs text-slate-600">Memuat detail…</div>
+      ) : err ? (
+        <div className="text-xs text-red-600">{err}</div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            <RowMini label="Nama Kantor Pos" value={namaKantor} />
+            <RowMini label="Kode Dirian" value={kodeDirian} />
+            <RowMini label="Regional" value={regional} />
+            <RowMini label="KPRK" value={kprk} />
+            <RowMini label="Jenis" value={jenis} />
+            <RowMini label="Alamat" value={alamat} />
+            <RowMini label="Desa/Kelurahan" value={nama_kel} />
+            <RowMini label="Kecamatan" value={nama_kec} />
+            <RowMini label="Kabupaten/Kota" value={nama_kab} />
+            <RowMini label="Provinsi" value={nama_prov} />
+          </div>
+
+          {photos.length > 0 && (
+            <>
+              <div className="mt-3 text-slate-600 text-sm">Photo</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {photos.slice(0, 4).map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`foto-${i}`}
+                    className="w-full h-28 object-cover rounded"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <div className="flex justify-between items-center mt-3">
+        <a
+          href={`https://www.google.com/maps?q=${row?.__lat},${row?.__lng}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs underline text-slate-600"
+        >
+          Zoom to
+        </a>
+
+        {/* TIGA TITIK: buka modal detail lengkap */}
+        <button
+          type="button"
+          onClick={() => onDetail({ ...(detail || {}), ...row })}
+          className="text-xl leading-none px-2 select-none cursor-pointer"
+          aria-label="Detail"
+          title="Detail"
+        >
+          …
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ====================== Props
+interface MapsI {
+  dataSource: Array<KPCKoordinat>;
+  isLoading: boolean;
+  currentType?: string; // lpu | lpk | mitra | penyelenggara
+}
+
+// ====================== Komponen utama
 const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
+  const router = useRouter();
+  const api = UseGuardInstance(router);
   const ctx = context();
 
   // UI state
@@ -110,7 +250,7 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
   const [regionalError, setRegionalError] = useState<string | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  // Load geojson—tampilkan info kalau file nggak ada
+  // Load GeoJSON
   useEffect(() => {
     (async () => {
       try {
@@ -137,6 +277,7 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
     })();
   }, []);
 
+  // Normalisasi titik
   const points = useMemo(() => {
     const out: any[] = [];
     for (let i = 0; i < (dataSource ?? []).length; i++) {
@@ -180,16 +321,16 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
     return out;
   }, [dataSource, currentType]);
 
-  const onClickDetail = (row: any) => {
+  // Modal detail lengkap
+  const openDetailModal = (payload: any) => {
     ctx.dispatch({
       isModal: {
-        title: "Detail Lokasi",
         type: "modal",
         component: (
           <PopupDetail
             data={{
-              ...row,
-              type_penyelenggara: row?.__type || currentType || "lpu",
+              ...(payload || {}),
+              type_penyelenggara: payload?.__type || currentType || "lpu",
             }}
           />
         ),
@@ -224,13 +365,13 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
         .leaflet-top.leaflet-right { margin-top: ${TOP_OFFSET_PX}px; }
       `}</style>
 
-      {/* Panel kanan: Base Map + Layers + Counter di bawah Layers */}
+      {/* Panel kanan: Style Map + Layers + radius counter */}
       <div
         className="absolute right-3 z-[500] space-y-2"
         style={{ top: TOP_OFFSET_PX }}
       >
         <div className="rounded-xl bg-white/95 shadow p-2 w-60 text-slate-900">
-          <div className="text-xs font-semibold mb-1">Base Map</div>
+          <div className="text-xs font-semibold mb-1">Style Map</div>
           <select
             className="w-full text-sm border rounded px-2 py-1 bg-white text-slate-900"
             value={base}
@@ -293,7 +434,6 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
             <span>Cakupan Layanan (radius 10 km)</span>
           </label>
 
-          {/* === Counter ditempatkan persis DI BAWAH panel Layers === */}
           <div className="mt-2 flex items-center gap-3 bg-white/95 rounded-xl px-3 py-2 shadow">
             <img src="/poslogo.png" alt="pos" className="w-7 h-7" />
             <div className="leading-tight">
@@ -306,6 +446,7 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
         </div>
       </div>
 
+      {/* Map */}
       <MapContainer
         center={indonesiaCenter}
         zoom={5}
@@ -318,11 +459,7 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
         {showRegional && regionalGeo && (
           <GeoJSON
             data={regionalGeo as any}
-            style={() => ({
-              color: "#ff7a00",
-              weight: 1.2,
-              fillOpacity: 0.04,
-            })}
+            style={() => ({ color: "#ff7a00", weight: 1.2, fillOpacity: 0.04 })}
           />
         )}
 
@@ -351,32 +488,8 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
                     row.__type === "mitra" ? "mitra" : "default"
                   )}
                 >
-                  <Popup maxWidth={360}>
-                    <div className="text-slate-900">
-                      <strong>{row.__nama}</strong>
-                      <br />
-                      Provinsi ID: {row.id_provinsi ?? "-"}
-                      <br />
-                      <small>Tipe: {row.__type || "lpu"}</small>
-                      {typeof row.__jarak_kckcu_km === "number" && (
-                        <>
-                          <br />
-                          <small>
-                            Jarak ke KC/KCU: {row.__jarak_kckcu_km.toFixed(2)}{" "}
-                            km
-                          </small>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex justify-center mt-3">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onClickDetail(row)}
-                      >
-                        Lihat Detail
-                      </Button>
-                    </div>
+                  <Popup maxWidth={380}>
+                    <PopupMini row={row} api={api} onDetail={openDetailModal} />
                   </Popup>
                 </Marker>
               ))}

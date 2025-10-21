@@ -21,7 +21,6 @@ import {
   getKpcKoordinat,
   getProvinsi,
   getRegional,
-  // ✅ pastikan ada di services-mu
   getKecamatan,
 } from "../../../../../services";
 import {
@@ -57,12 +56,11 @@ const FormSchema = z.object({
   id_penyelenggara: z.string().optional(),
   id_provinsi: z.string().optional(),
   id_kabupaten_kota: z.string().optional(),
-  id_kecamatan: z.string().optional(), // ✅ baru
+  id_kecamatan: z.string().optional(),
   id_regional: z.string().optional(),
   id_kprk: z.string().optional(),
   id_kpc: z.string().optional(),
 });
-
 type TipePenyelenggara = "lpu" | "mitra" | "penyelenggara";
 
 const MapsComp = dynamic(() => import("./maps"), { ssr: false });
@@ -91,7 +89,7 @@ const Monitoring: NextPage = () => {
   );
   const [kecamatanOptions, setKecamatanOptions] = useState<
     Array<FormCustomOption>
-  >([]); // ✅ baru
+  >([]);
   const [penyelenggaraOptions, setPenyelenggaraOptions] = useState<
     Array<FormCustomOption>
   >([]);
@@ -114,16 +112,10 @@ const Monitoring: NextPage = () => {
     penyelenggara: ["penyelenggara", "provinsi", "kabupaten/kota", "kecamatan"],
   };
 
-  const updatePenyelenggaraOptions = (type: string) => {
-    if (type === "penyelenggara") {
-      setPenyelenggaraOptions(list_penyelenggara);
-    } else {
-      setPenyelenggaraOptions([]);
-    }
-  };
-
   useEffect(() => {
-    updatePenyelenggaraOptions(selectedTipePenyelenggara);
+    if (selectedTipePenyelenggara === "penyelenggara")
+      setPenyelenggaraOptions(list_penyelenggara);
+    else setPenyelenggaraOptions([]);
   }, [selectedTipePenyelenggara]);
 
   const firstInit = async () => {
@@ -170,33 +162,21 @@ const Monitoring: NextPage = () => {
   ) => {
     setIsLoading(true);
 
-    const tempParams: QueryParams = {};
-    tempParams.limit = "5000";
-
-    if (tipe_penyelenggara && tipe_penyelenggara !== " ") {
+    const tempParams: QueryParams = { limit: "5000" };
+    if (tipe_penyelenggara && tipe_penyelenggara !== " ")
       tempParams.type_penyelenggara = tipe_penyelenggara;
-    }
-    if (id_penyelenggara && id_penyelenggara !== " ") {
+    if (id_penyelenggara && id_penyelenggara !== " ")
       tempParams.id_penyelenggara = id_penyelenggara;
-    }
-    if (id_provinsi && id_provinsi !== " ") {
+    if (id_provinsi && id_provinsi !== " ")
       tempParams.id_provinsi = id_provinsi;
-    }
-    if (id_kabupaten_kota && id_kabupaten_kota !== " ") {
+    if (id_kabupaten_kota && id_kabupaten_kota !== " ")
       tempParams.id_kabupaten_kota = id_kabupaten_kota;
-    }
-    if (id_kecamatan && id_kecamatan !== " ") {
+    if (id_kecamatan && id_kecamatan !== " ")
       tempParams.id_kecamatan = id_kecamatan;
-    }
-    if (id_regional && id_regional !== " ") {
+    if (id_regional && id_regional !== " ")
       tempParams.id_regional = id_regional;
-    }
-    if (id_kprk && id_kprk !== " ") {
-      tempParams.id_kprk = id_kprk;
-    }
-    if (id_kpc && id_kpc !== " ") {
-      tempParams.id_kpc = id_kpc;
-    }
+    if (id_kprk && id_kprk !== " ") tempParams.id_kprk = id_kprk;
+    if (id_kpc && id_kpc !== " ") tempParams.id_kpc = id_kpc;
 
     const params = buildQueryParam(tempParams) || "";
     try {
@@ -240,7 +220,6 @@ const Monitoring: NextPage = () => {
 
   const getKotaByProvince = async (id: string | number) => {
     setIsKotaLoading(true);
-    // reset turunan
     form.setValue("id_kabupaten_kota", "");
     form.setValue("id_kecamatan", "");
     setKecamatanOptions([]);
@@ -314,7 +293,7 @@ const Monitoring: NextPage = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative p-4">
       <div
         className={cn(
           "absolute z-10 top-0 left-0 right-0 bg-[#AFD2DF]/70 backdrop-blur-sm",
