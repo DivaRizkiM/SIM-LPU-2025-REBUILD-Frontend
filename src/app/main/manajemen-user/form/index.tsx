@@ -109,7 +109,6 @@ const FormData:FC<FromDataI> = ({ trigger,data })=> {
           setIsLoading(false)
         })
     } else {
-      alert('masuk edit')
       await putUser(router,payload,dataForm.id)
         .then((res)=> {
           trigger()
@@ -195,23 +194,6 @@ const FormData:FC<FromDataI> = ({ trigger,data })=> {
             )}
           />
         </div>
-          <FormField
-            control={form.control}
-            name="foto"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Foto</FormLabel>
-                <FormControl>
-                  <Input type="file"  {...fileRef} autoFocus={false} 
-                    // onChange={(event) => {
-                    //   field.onChange(event.target?.files?.[0] ?? undefined);
-                    // }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <FormField
               control={form.control}
