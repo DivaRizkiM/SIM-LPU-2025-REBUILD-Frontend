@@ -19,8 +19,8 @@ const GaugeChart: React.FC<GaugeI> = ({ data }) => {
     min = 0,
     max = 100,
     thickness = 12,
-    trackColor = "#FFB703",      // biru 10% (rgba hex)
-    progressColor = "#FB8500",     // biru muda
+    trackColor = "#6E8CFB",      // biru 10% (rgba hex)
+    progressColor = "#3C467B",     // biru muda
     showLabel = true,
     className = "",
   } = data;
