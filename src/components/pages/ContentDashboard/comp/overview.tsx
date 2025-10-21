@@ -66,7 +66,7 @@ export function Overview({ data }: BarCompI) {
         <Bar
           dataKey="value"
           radius={[4, 4, 0, 0]}
-          style={{ fill: "#FB8500" }} // inline style > CSS
+          style={{ fill: "#3C467B" }} // inline style > CSS
           fillOpacity={0.9}
         />
       </BarChart>
