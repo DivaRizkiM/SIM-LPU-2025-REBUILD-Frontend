@@ -26,20 +26,18 @@ type Option = { value: string; label: string };
 
 export type DashboardFilterValues = {
   id_regional?: string;
-  id_kprk?: string; // KCU
-  id_kpc?: string; // KCP
-  id_provinsi?: string;
-  id_kabupaten_kota?: string;
-  id_kecamatan?: string;
+  id_kprk?: string;
+  id_kpc?: string;  
+  tahun?: string;   
+  view?: "bulan" | "triwulan"; 
 };
 
 const FormSchema = z.object({
   id_regional: z.string().optional(),
   id_kprk: z.string().optional(),
   id_kpc: z.string().optional(),
-  id_provinsi: z.string().optional(),
-  id_kabupaten_kota: z.string().optional(),
-  id_kecamatan: z.string().optional(),
+  tahun: z.string().optional(),                 
+  view: z.enum(["bulan", "triwulan"]).optional()
 });
 
 export const DashboardFilters: FC<{
@@ -54,9 +52,8 @@ export const DashboardFilters: FC<{
       id_regional: "",
       id_kprk: "",
       id_kpc: "",
-      id_provinsi: "",
-      id_kabupaten_kota: "",
-      id_kecamatan: "",
+      tahun: String(new Date().getFullYear()), 
+      view: "bulan",                           
       ...defaultValues,
     },
   });
@@ -70,6 +67,17 @@ export const DashboardFilters: FC<{
   const [regionalOptions, setRegionalOptions] = useState<Option[]>([]);
   const [kcuOptions, setKcuOptions] = useState<Option[]>([]);
   const [kcpOptions, setKcpOptions] = useState<Option[]>([]);
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions: Option[] = Array.from({ length: 6 }, (_, i) => {
+    const y = currentYear - i;
+    return { value: String(y), label: String(y) };
+  });
+
+  const viewOptions: Option[] = [
+    { value: "bulan", label: "Bulanan" },
+    { value: "triwulan", label: "Triwulan" },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -140,18 +148,20 @@ export const DashboardFilters: FC<{
 
   const buildParams = (v: DashboardFilterValues) => {
     const p: QueryParams = {};
-    if (v.id_regional && v.id_regional !== "") p.id_regional = v.id_regional;
-    if (v.id_kprk && v.id_kprk !== "") p.id_kprk = v.id_kprk;
-    if (v.id_kpc && v.id_kpc !== "") p.id_kpc = v.id_kpc;
+    if (v.id_regional) p.id_regional = v.id_regional;
+    if (v.id_kprk)     p.id_kprk     = v.id_kprk;
+    if (v.id_kpc)      p.id_kpc      = v.id_kpc;
+    if (v.tahun)       p.tahun       = v.tahun;       
+    if (v.view)        p.view        = v.view;        
     return buildQueryParam(p) || "";
   };
 
   const watched = useWatch({
     control: form.control,
-    name: ["id_regional", "id_kprk", "id_kpc"],
+    name: ["id_regional", "id_kprk", "id_kpc", "tahun", "view"], 
   });
   const debounceRef = useRef<number | null>(null);
-
+  
   useEffect(() => {
     // auto-apply saat mount & setiap perubahan 3 field kunci
     const values = form.getValues() as DashboardFilterValues;
@@ -166,7 +176,7 @@ export const DashboardFilters: FC<{
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched?.[0], watched?.[1], watched?.[2]]);
+  }, [watched?.[0], watched?.[1], watched?.[2], watched?.[3], watched?.[4]]);
   // ==========================================================================
 
   return (
@@ -259,6 +269,38 @@ export const DashboardFilters: FC<{
                     onSelect={(v) => form.setValue("id_kpc", v)}
                     isLoading={isKcpLoading}
                     disabled={kcpOptions.length === 0}
+                  />
+                </FormItem>
+              )}
+            />
+
+            {/* TAHUN */}
+            <FormField
+              control={form.control}
+              name="tahun"
+              render={({ field }) => (
+                <FormItem>
+                  <Combobox
+                    options={yearOptions}
+                    placeholder="Pilih Tahun"
+                    value={field.value}
+                    onSelect={(v) => form.setValue("tahun", v)}
+                  />
+                </FormItem>
+              )}
+            />
+
+            {/* TIPE TAMPILAN */}
+            <FormField
+              control={form.control}
+              name="view"
+              render={({ field }) => (
+                <FormItem>
+                  <Combobox
+                    options={viewOptions}
+                    placeholder="Tipe Tampilan"
+                    value={field.value}
+                    onSelect={(v) => form.setValue("view", v as "bulan" | "triwulan")}
                   />
                 </FormItem>
               )}
