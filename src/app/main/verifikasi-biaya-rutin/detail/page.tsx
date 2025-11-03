@@ -72,6 +72,8 @@ const Detail: NextPage = () => {
     "5102060011",
   ]);
   const isNPP = NPP_CODES.has(String(selectedData?.kode_rekening ?? ""));
+  const isAutoVerif = isLTK || isNPP; // verifikasi otomatis untuk LTK dan NPP
+
   const rows = isLTK
     ? [
         { label: "Keterangan", value: selectedData?.keterangan ?? "0" },
@@ -132,13 +134,22 @@ const Detail: NextPage = () => {
 
         const tempDataVerifs: IFormRutinVerifikasi[] = dataResponse.map(
           (data) => {
+            const isLTKItem = String(data.kode_rekening ?? "") === "5000000010";
+            const isNPPItem = NPP_CODES.has(String(data.kode_rekening ?? ""));
+            const autoValue = isLTKItem
+              ? data.hasil_perhitungan_fase_3
+              : isNPPItem
+              ? data.biaya_per_npp
+              : data.verifikasi;
             return {
               id_verifikasi_biaya_rutin_detail:
                 data.id_verifikasi_biaya_rutin_detail,
-              verifikasi: cleanCurrencyFormat(data.verifikasi),
+              verifikasi: cleanCurrencyFormat(autoValue ?? ""),
               catatan_pemeriksa: data.catatan_pemeriksa,
               isVerifikasiSesuai:
-                data.verifikasi === "Rp 0,00"
+                isLTKItem || isNPPItem
+                  ? "1"
+                  : data.verifikasi === "Rp 0,00"
                   ? ""
                   : data.verifikasi === data.pelaporan
                   ? "1"
@@ -353,47 +364,56 @@ const Detail: NextPage = () => {
                   readOnly
                 />
               </div>
-              <div className="grid gap-2 md:grid-cols-4 items-center">
-                <div>
-                  <Label>Pilih Kondisi*</Label>
-                  {!dataVerifications[indexSelected]?.isVerifikasiSesuai && (
-                    <div className="text-xs text-red-600">Wajib diisi</div>
-                  )}
-                </div>
-                <div className="w-full col-span-3">
-                  <Select
-                    value={dataVerifications[indexSelected]?.isVerifikasiSesuai}
-                    onValueChange={selectHandler}
-                  >
-                    <SelectTrigger
-                      className={
-                        !dataVerifications[indexSelected]?.isVerifikasiSesuai
-                          ? "border-red-600"
-                          : ""
-                      }
-                    >
-                      <SelectValue placeholder="Pilih Kondisi" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="1">Sesuai</SelectItem>
-                        <SelectItem value="0">Tidak Sesuai</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2 md:grid-cols-4 items-center">
-                <div>
-                  <Label>Nominal Verifikasi*</Label>
-                  {dataVerifications[indexSelected]?.verifikasi === "" && (
-                    <div className="text-xs text-red-600">Wajib diisi</div>
-                  )}
-                </div>
-                <CurrencyInput
-                  value={dataVerifications[indexSelected]?.verifikasi}
-                  name="verifikasi"
-                  className={`
+
+              {/* Jika bukan auto verifikasi: tampilkan pilihan kondisi + editable nominal seperti sebelumnya.
+                  Jika auto verifikasi (LTK atau NPP): tampilkan nominal verifikasi readOnly (dari backend) tanpa pilihan kondisi. */}
+              {!isAutoVerif ? (
+                <>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>Pilih Kondisi*</Label>
+                      {!dataVerifications[indexSelected]
+                        ?.isVerifikasiSesuai && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <div className="w-full col-span-3">
+                      <Select
+                        value={
+                          dataVerifications[indexSelected]?.isVerifikasiSesuai
+                        }
+                        onValueChange={selectHandler}
+                      >
+                        <SelectTrigger
+                          className={
+                            !dataVerifications[indexSelected]
+                              ?.isVerifikasiSesuai
+                              ? "border-red-600"
+                              : ""
+                          }
+                        >
+                          <SelectValue placeholder="Pilih Kondisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="1">Sesuai</SelectItem>
+                            <SelectItem value="0">Tidak Sesuai</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>Nominal Verifikasi*</Label>
+                      {dataVerifications[indexSelected]?.verifikasi === "" && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <CurrencyInput
+                      value={dataVerifications[indexSelected]?.verifikasi}
+                      name="verifikasi"
+                      className={`
                                         w-full col-span-3 ${
                                           dataVerifications[indexSelected]
                                             ?.isVerifikasiSesuai === "1" ||
@@ -409,14 +429,42 @@ const Detail: NextPage = () => {
                                             : ""
                                         }
                                     `}
-                  readOnly={
-                    dataVerifications[indexSelected]?.isVerifikasiSesuai ===
-                      "1" ||
-                    dataVerifications[indexSelected]?.isVerifikasiSesuai === ""
-                  }
-                  onChange={handleInput}
-                />
-              </div>
+                      readOnly={
+                        dataVerifications[indexSelected]?.isVerifikasiSesuai ===
+                          "1" ||
+                        dataVerifications[indexSelected]?.isVerifikasiSesuai ===
+                          ""
+                      }
+                      onChange={handleInput}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <Label>Nominal Verifikasi</Label>
+                    <CurrencyInput
+                      value={
+                        isLTK
+                          ? cleanCurrencyFormat(
+                              selectedData?.hasil_perhitungan_fase_3 || ""
+                            )
+                          : isNPP
+                          ? cleanCurrencyFormat(
+                              selectedData?.biaya_per_npp || ""
+                            )
+                          : dataVerifications[indexSelected]?.verifikasi ||
+                            selectedData?.verifikasi ||
+                            ""
+                      }
+                      name="verifikasi"
+                      className="w-full col-span-3 bg-secondary"
+                      readOnly
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="grid gap-2 md:grid-cols-4 items-center">
                 <Label>Catatan Pemeriksa</Label>
                 <Textarea
