@@ -72,7 +72,7 @@ const Detail: NextPage = () => {
     "5102060011",
   ]);
   const isNPP = NPP_CODES.has(String(selectedData?.kode_rekening ?? ""));
-  const isAutoVerif = isLTK || isNPP; // verifikasi otomatis untuk LTK dan NPP
+  const isAutoVerif = isNPP; 
 
   const rows = isLTK
     ? [
