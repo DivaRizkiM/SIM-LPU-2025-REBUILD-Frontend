@@ -137,7 +137,7 @@ const Detail: NextPage = () => {
             const isLTKItem = String(data.kode_rekening ?? "") === "5000000010";
             const isNPPItem = NPP_CODES.has(String(data.kode_rekening ?? ""));
             const autoValue = isLTKItem
-              ? data.hasil_perhitungan_fase_3
+              ? data.verifikasi
               : isNPPItem
               ? data.biaya_per_npp
               : data.verifikasi;
@@ -447,7 +447,7 @@ const Detail: NextPage = () => {
                       value={
                         isLTK
                           ? cleanCurrencyFormat(
-                              selectedData?.hasil_perhitungan_fase_3 || ""
+                              selectedData?.verifikasi || ""
                             )
                           : isNPP
                           ? cleanCurrencyFormat(
