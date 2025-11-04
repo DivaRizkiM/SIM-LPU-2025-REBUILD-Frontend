@@ -72,7 +72,7 @@ const Detail: NextPage = () => {
     "5102060011",
   ]);
   const isNPP = NPP_CODES.has(String(selectedData?.kode_rekening ?? ""));
-  const isAutoVerif = isNPP; // verifikasi otomatis untuk LTK dan NPP
+  const isAutoVerif = isLTK || isNPP; // verifikasi otomatis untuk LTK dan NPP
 
   const rows = isLTK
     ? [
@@ -445,7 +445,11 @@ const Detail: NextPage = () => {
                     <Label>Nominal Verifikasi</Label>
                     <CurrencyInput
                       value={
-                        isNPP
+                        isLTK
+                          ? cleanCurrencyFormat(
+                              (selectedData?.verifikasi ?? selectedData?.hasil_perhitungan_fase_3) || ""
+                            )
+                          : isNPP
                           ? cleanCurrencyFormat(
                               (selectedData?.verifikasi ?? selectedData?.biaya_per_npp) || ""
                             )
