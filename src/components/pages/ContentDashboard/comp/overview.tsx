@@ -63,44 +63,77 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
   const ACTIVE_COLOR_BIAYA = "#1e5fe8";
   const ACTIVE_COLOR_PENDAPATAN = "#047857";
 
-  // tentukan index bar yang active (jika ada)
-  const activeIndex = useMemo(() => {
-    if (!selectedView || !selectedValue) return -1;
+  const activeSet = useMemo(() => {
+    const set = new Set<number>();
+    if (!selectedView || !selectedValue) return set;
+
+    const romanMap: Record<string, number> = {
+      i: 1,
+      ii: 2,
+      iii: 3,
+      iv: 4,
+    };
+
     if (selectedView === "bulan") {
       const monthIdx = parseInt(selectedValue, 10) - 1;
       if (monthIdx >= 0 && monthIdx < MONTH_NAMES.length) {
         const target = MONTH_NAMES[monthIdx].toLowerCase();
-        return rows.findIndex((r: any) =>
-          String(r.category || "")
-            .toLowerCase()
-            .includes(target)
-        );
+        rows.forEach((r: any, i: number) => {
+          if (
+            String(r.category || "")
+              .toLowerCase()
+              .includes(target)
+          )
+            set.add(i);
+        });
       }
     } else {
-      // triwulan: cocokkan "Triwulan X" atau "TW X"
-      const t = String(selectedValue);
-      return rows.findIndex(
-        (r: any) =>
-          String(r.category || "")
-            .toLowerCase()
-            .includes(`triwulan ${t}`) ||
-          String(r.category || "")
-            .toLowerCase()
-            .includes(`tw ${t}`) ||
-          String(r.category || "")
-            .toLowerCase()
-            .includes(`tw${t}`)
-      );
+      // triwulan: highlight semua bulan dalam triwulan, dan juga kategori bertuliskan
+      // "Triwulan X" / "TW X" / "Triwulan I" etc — tapi lakukan exact match pada token hasil ekstraksi
+      const t = parseInt(String(selectedValue), 10);
+      if (t >= 1 && t <= 4) {
+        const start = (t - 1) * 3;
+        const triMonths = MONTH_NAMES.slice(start, start + 3).map((m) =>
+          m.toLowerCase()
+        );
+
+        rows.forEach((r: any, i: number) => {
+          const rawCat = String(r.category || "");
+          const cat = rawCat.toLowerCase().replace(/\s+/g, " ").trim();
+
+          // match month names (for monthly-chart shaped data)
+          const matchesMonth = triMonths.some((m) => cat.includes(m));
+
+          // try extract explicit triwulan number from variations:
+          // e.g. "triwulan 2", "triwulan ii", "tw 2", "tw ii", "triwulan-ii", "triwulan: ii"
+          let matchesTw = false;
+          const triMatch = cat.match(/triwulan[\s\-:]*([ivx]+|\d+)/i);
+          const twMatch = cat.match(/\btw[\s\-:]*([ivx]+|\d+)/i);
+          const token =
+            (triMatch && triMatch[1]) || (twMatch && twMatch[1]) || null;
+
+          if (token) {
+            const low = token.toLowerCase();
+            let val: number | null = null;
+            if (/^\d+$/.test(low)) {
+              val = parseInt(low, 10);
+            } else if (romanMap[low]) {
+              val = romanMap[low];
+            }
+            if (val === t) matchesTw = true;
+          }
+
+          if (matchesMonth || matchesTw) set.add(i);
+        });
+      }
     }
-    return -1;
+    return set;
   }, [rows, selectedView, selectedValue]);
 
-  // jika ada active, buat non-active menjadi pudar agar terlihat kontras
-  const hasActive = activeIndex >= 0;
+  const hasActive = activeSet.size > 0;
 
   return (
     <div className="relative">
-      {" "}
       {/* wrapper utk overlay */}
       <ResponsiveContainer
         width="100%"
@@ -110,8 +143,8 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
         <BarChart
           data={rows}
           margin={{ top: 10, right: 20, left: 80, bottom: 20 }}
-          barCategoryGap="20%" // jarak antar kategori (bulan/triwulan)
-          barGap={4} // jarak antar bar di dalam kategori
+          barCategoryGap="20%"
+          barGap={4}
         >
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
 
@@ -151,7 +184,6 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
 
           <Legend wrapperStyle={{ fontSize: 12 }} />
 
-          {/* 3 batang per kategori dengan Cell untuk mewarnai per-item */}
           <Bar
             dataKey="subsidi"
             name="Subsidi Operasional"
@@ -162,21 +194,22 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
             {rows.map((_, i) => (
               <Cell
                 key={`subsidi-${i}`}
-                fill={i === activeIndex ? ACTIVE_COLOR_SUBSIDI : COLOR_SUBSIDI}
+                fill={activeSet.has(i) ? ACTIVE_COLOR_SUBSIDI : COLOR_SUBSIDI}
                 fillOpacity={
                   hasActive
-                    ? i === activeIndex
+                    ? activeSet.has(i)
                       ? 1
                       : 0.35
                     : isEmptyAll
                     ? 0.8
                     : 1
                 }
-                stroke={i === activeIndex ? "#00000022" : undefined}
-                strokeWidth={i === activeIndex ? 1 : 0}
+                stroke={activeSet.has(i) ? "#00000022" : undefined}
+                strokeWidth={activeSet.has(i) ? 1 : 0}
               />
             ))}
           </Bar>
+
           <Bar
             dataKey="biaya"
             name="Biaya"
@@ -187,21 +220,22 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
             {rows.map((_, i) => (
               <Cell
                 key={`biaya-${i}`}
-                fill={i === activeIndex ? ACTIVE_COLOR_BIAYA : COLOR_BIAYA}
+                fill={activeSet.has(i) ? ACTIVE_COLOR_BIAYA : COLOR_BIAYA}
                 fillOpacity={
                   hasActive
-                    ? i === activeIndex
+                    ? activeSet.has(i)
                       ? 1
                       : 0.35
                     : isEmptyAll
                     ? 0.8
                     : 1
                 }
-                stroke={i === activeIndex ? "#00000022" : undefined}
-                strokeWidth={i === activeIndex ? 1 : 0}
+                stroke={activeSet.has(i) ? "#00000022" : undefined}
+                strokeWidth={activeSet.has(i) ? 1 : 0}
               />
             ))}
           </Bar>
+
           <Bar
             dataKey="pendapatan"
             name="Pendapatan"
@@ -213,24 +247,25 @@ export function Overview({ data, selectedView, selectedValue }: BarCompI) {
               <Cell
                 key={`pendapatan-${i}`}
                 fill={
-                  i === activeIndex ? ACTIVE_COLOR_PENDAPATAN : COLOR_PENDAPATAN
+                  activeSet.has(i) ? ACTIVE_COLOR_PENDAPATAN : COLOR_PENDAPATAN
                 }
                 fillOpacity={
                   hasActive
-                    ? i === activeIndex
+                    ? activeSet.has(i)
                       ? 1
                       : 0.35
                     : isEmptyAll
                     ? 0.9
                     : 1
                 }
-                stroke={i === activeIndex ? "#00000022" : undefined}
-                strokeWidth={i === activeIndex ? 1 : 0}
+                stroke={activeSet.has(i) ? "#00000022" : undefined}
+                strokeWidth={activeSet.has(i) ? 1 : 0}
               />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+
       {/* Overlay info saat kosong */}
       {isEmptyAll && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
