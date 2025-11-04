@@ -27,17 +27,21 @@ type Option = { value: string; label: string };
 export type DashboardFilterValues = {
   id_regional?: string;
   id_kprk?: string;
-  id_kpc?: string;  
-  tahun?: string;   
-  view?: "bulan" | "triwulan"; 
+  id_kpc?: string;
+  tahun?: string;
+  view?: "bulan" | "triwulan";
+  bulan?: string;
+  triwulan?: string;
 };
 
 const FormSchema = z.object({
   id_regional: z.string().optional(),
   id_kprk: z.string().optional(),
   id_kpc: z.string().optional(),
-  tahun: z.string().optional(),                 
-  view: z.enum(["bulan", "triwulan"]).optional()
+  tahun: z.string().optional(),
+  view: z.enum(["bulan", "triwulan"]).optional(),
+  bulan: z.string().optional(),
+  triwulan: z.string().optional(),
 });
 
 export const DashboardFilters: FC<{
@@ -46,14 +50,22 @@ export const DashboardFilters: FC<{
 }> = ({ defaultValues, onApply }) => {
   const router = useRouter();
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const defaultBulan = String(now.getMonth() + 1);
+  const defaultTriwulan = String(Math.floor(now.getMonth() / 3) + 1);
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       id_regional: "",
       id_kprk: "",
       id_kpc: "",
-      tahun: String(new Date().getFullYear()), 
-      view: "bulan",                           
+      tahun: String(currentYear),
+      // default view bulanan, but period empty = "Semua"
+      view: "bulan",
+      bulan: "",
+      triwulan: "",
       ...defaultValues,
     },
   });
@@ -68,7 +80,6 @@ export const DashboardFilters: FC<{
   const [kcuOptions, setKcuOptions] = useState<Option[]>([]);
   const [kcpOptions, setKcpOptions] = useState<Option[]>([]);
 
-  const currentYear = new Date().getFullYear();
   const yearOptions: Option[] = Array.from({ length: 6 }, (_, i) => {
     const y = currentYear - i;
     return { value: String(y), label: String(y) };
@@ -77,6 +88,30 @@ export const DashboardFilters: FC<{
   const viewOptions: Option[] = [
     { value: "bulan", label: "Bulanan" },
     { value: "triwulan", label: "Triwulan" },
+  ];
+
+  const monthOptions: Option[] = [
+    { value: "", label: "Semua Bulan" },
+    { value: "1", label: "Januari" },
+    { value: "2", label: "Februari" },
+    { value: "3", label: "Maret" },
+    { value: "4", label: "April" },
+    { value: "5", label: "Mei" },
+    { value: "6", label: "Juni" },
+    { value: "7", label: "Juli" },
+    { value: "8", label: "Agustus" },
+    { value: "9", label: "September" },
+    { value: "10", label: "Oktober" },
+    { value: "11", label: "November" },
+    { value: "12", label: "Desember" },
+  ];
+
+  const triwulanOptions: Option[] = [
+    { value: "", label: "Semua Triwulan" },
+    { value: "1", label: "Triwulan 1 (Jan-Mar)" },
+    { value: "2", label: "Triwulan 2 (Apr-Jun)" },
+    { value: "3", label: "Triwulan 3 (Jul-Sep)" },
+    { value: "4", label: "Triwulan 4 (Okt-Des)" },
   ];
 
   useEffect(() => {
@@ -149,21 +184,32 @@ export const DashboardFilters: FC<{
   const buildParams = (v: DashboardFilterValues) => {
     const p: QueryParams = {};
     if (v.id_regional) p.id_regional = v.id_regional;
-    if (v.id_kprk)     p.id_kprk     = v.id_kprk;
-    if (v.id_kpc)      p.id_kpc      = v.id_kpc;
-    if (v.tahun)       p.tahun       = v.tahun;       
-    if (v.view)        p.view        = v.view;        
+    if (v.id_kprk) p.id_kprk = v.id_kprk;
+    if (v.id_kpc) p.id_kpc = v.id_kpc;
+    if (v.tahun) p.tahun = v.tahun;
+    if (v.view) p.view = v.view;
+    // only include relevant period param
+    if (v.view === "bulan" && v.bulan) p.bulan = v.bulan;
+    if (v.view === "triwulan" && v.triwulan) p.triwulan = v.triwulan;
     return buildQueryParam(p) || "";
   };
 
   const watched = useWatch({
     control: form.control,
-    name: ["id_regional", "id_kprk", "id_kpc", "tahun", "view"], 
+    name: [
+      "id_regional",
+      "id_kprk",
+      "id_kpc",
+      "tahun",
+      "view",
+      "bulan",
+      "triwulan",
+    ],
   });
   const debounceRef = useRef<number | null>(null);
-  
+
   useEffect(() => {
-    // auto-apply saat mount & setiap perubahan 3 field kunci
+    // auto-apply saat mount & setiap perubahan 3 field kunci + periode
     const values = form.getValues() as DashboardFilterValues;
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -176,7 +222,15 @@ export const DashboardFilters: FC<{
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched?.[0], watched?.[1], watched?.[2], watched?.[3], watched?.[4]]);
+  }, [
+    watched?.[0],
+    watched?.[1],
+    watched?.[2],
+    watched?.[3],
+    watched?.[4],
+    watched?.[5],
+    watched?.[6],
+  ]);
   // ==========================================================================
 
   return (
@@ -300,11 +354,58 @@ export const DashboardFilters: FC<{
                     options={viewOptions}
                     placeholder="Tipe Tampilan"
                     value={field.value}
-                    onSelect={(v) => form.setValue("view", v as "bulan" | "triwulan")}
+                    onSelect={(v) => {
+                      // default view tetap bulanan, tapi periode tetap kosong ("Semua")
+                      form.setValue("view", v as "bulan" | "triwulan");
+                      // reset period yang tidak relevan, jangan auto-set specific month/triwulan
+                      if (v === "bulan") {
+                        form.setValue("triwulan", "");
+                        // keep bulan as "" => "Semua Bulan" unless user choose
+                      } else {
+                        form.setValue("bulan", "");
+                        // keep triwulan as "" => "Semua Triwulan" unless user choose
+                      }
+                    }}
                   />
                 </FormItem>
               )}
             />
+
+            {/* BULAN - hanya tampil kalau view === 'bulan' */}
+            {form.getValues("view") === "bulan" && (
+              <FormField
+                control={form.control}
+                name="bulan"
+                render={({ field }) => (
+                  <FormItem>
+                    <Combobox
+                      options={monthOptions}
+                      placeholder="Pilih Bulan"
+                      value={field.value}
+                      onSelect={(v) => form.setValue("bulan", v)}
+                    />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* TRIWULAN - hanya tampil kalau view === 'triwulan' */}
+            {form.getValues("view") === "triwulan" && (
+              <FormField
+                control={form.control}
+                name="triwulan"
+                render={({ field }) => (
+                  <FormItem>
+                    <Combobox
+                      options={triwulanOptions}
+                      placeholder="Pilih Triwulan"
+                      value={field.value}
+                      onSelect={(v) => form.setValue("triwulan", v)}
+                    />
+                  </FormItem>
+                )}
+              />
+            )}
           </form>
         </Form>
       </div>
