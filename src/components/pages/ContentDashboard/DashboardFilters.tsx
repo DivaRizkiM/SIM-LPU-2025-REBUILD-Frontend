@@ -108,10 +108,10 @@ export const DashboardFilters: FC<{
 
   const triwulanOptions: Option[] = [
     { value: "", label: "Semua Triwulan" },
-    { value: "1", label: "Triwulan 1 (Jan-Mar)" },
-    { value: "2", label: "Triwulan 2 (Apr-Jun)" },
-    { value: "3", label: "Triwulan 3 (Jul-Sep)" },
-    { value: "4", label: "Triwulan 4 (Okt-Des)" },
+    { value: "1", label: "Triwulan I" },
+    { value: "2", label: "Triwulan II" },
+    { value: "3", label: "Triwulan III" },
+    { value: "4", label: "Triwulan IV" },
   ];
 
   useEffect(() => {
