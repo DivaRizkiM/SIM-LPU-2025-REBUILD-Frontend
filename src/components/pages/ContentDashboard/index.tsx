@@ -94,6 +94,16 @@ export default function ContentDashboard() {
     setRawFilters(raw);
   };
 
+  // tambahkan ini sebelum render Overview
+  const selectedView = rawFilters?.view;
+  const selectedValue =
+    selectedView === "bulan" ? rawFilters?.bulan : rawFilters?.triwulan;
+
+  // if user filtered by bulan/triwulan, consider it a period-filter — hide Gauge
+  const hasPeriodFilter =
+    (rawFilters?.view === "bulan" && !!rawFilters?.bulan) ||
+    (rawFilters?.view === "triwulan" && !!rawFilters?.triwulan);
+  const cardGridCols = hasPeriodFilter ? "lg:grid-cols-2" : "lg:grid-cols-3";
   return (
     <div className="flex-col md:flex">
       <div className="flex-1 space-y-4 p-8 pt-6">
@@ -162,20 +172,22 @@ export default function ContentDashboard() {
               </Card>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Card className="relative">
-                {isGaugeDataLoading && (
-                  <div className="absolute inset-0 bg-black/5 dark:bg-black/25 z-10 flex items-center justify-center">
-                    <Loader2 className="h-4 w-4 animate-spin mt-8" />
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle>Realisasi Anggaran</CardTitle>
-                </CardHeader>
-                <CardContent className="pl-2 w-min mx-auto my-auto items-center">
-                  {GaugeData && <GaugeChart data={GaugeData} />}
-                </CardContent>
-              </Card>
+            <div className={`grid gap-4 ${cardGridCols}`}>
+              {!hasPeriodFilter && (
+                <Card className="relative">
+                  {isGaugeDataLoading && (
+                    <div className="absolute inset-0 bg-black/5 dark:bg-black/25 z-10 flex items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin mt-8" />
+                    </div>
+                  )}
+                  <CardHeader>
+                    <CardTitle>Realisasi Anggaran</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pl-2 w-min mx-auto my-auto items-center">
+                    {GaugeData && <GaugeChart data={GaugeData} />}
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="relative">
                 {isPieDataLoading && (
@@ -223,7 +235,11 @@ export default function ContentDashboard() {
                 <CardContent className="p-4">
                   {BarData ? (
                     <div className="w-full h-[350px] overflow-visible">
-                      <Overview data={BarData} />
+                      <Overview
+                        data={BarData}
+                        selectedView={selectedView}
+                        selectedValue={selectedValue}
+                      />
                     </div>
                   ) : (
                     <div className="text-center text-muted-foreground text-sm py-4">
