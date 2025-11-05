@@ -128,6 +128,27 @@ const Detail: NextPage = () => {
     const value = event.target.value;
     if (indexSelected >= 0) {
       const tempData = [...dataVerifications];
+
+      // guard / init entry jika belum ada
+      if (!tempData[indexSelected]) {
+        tempData[indexSelected] = {
+          id_ltk: selectedData?.id.toString() || "",
+          verifikasi_akuntansi: "0,00",
+          isVerifikasiAkuntansiSesuai: "",
+          isVerifikasiProporsiSesuai: "",
+          isVerifikasiPsoSesuai: "",
+          verifikasi_pso: "0,00",
+          verifikasi_proporsi: "0,00",
+          proporsi_rumus_fase_1:
+            typeof selectedData?.proporsi_rumus_fase_1 === "number"
+              ? selectedData?.proporsi_rumus_fase_1
+              : selectedData?.proporsi_rumus_fase_1
+              ? String(selectedData?.proporsi_rumus_fase_1)
+              : undefined,
+          catatan_pemeriksa: "",
+        };
+      }
+
       tempData[indexSelected] = {
         ...tempData[indexSelected],
         [eventName]: value, // biarkan value langsung, agar proporsi_rumus_fase_1 bisa diubah
@@ -141,6 +162,26 @@ const Detail: NextPage = () => {
     fieldName: "akuntansi" | "pso" | "proporsi"
   ) => {
     const tempData = [...dataVerifications];
+
+    // guard / init entry jika belum ada
+    if (!tempData[indexSelected]) {
+      tempData[indexSelected] = {
+        id_ltk: selectedData?.id.toString() || "",
+        verifikasi_akuntansi: "0,00",
+        isVerifikasiAkuntansiSesuai: "",
+        isVerifikasiProporsiSesuai: "",
+        isVerifikasiPsoSesuai: "",
+        verifikasi_pso: "0,00",
+        verifikasi_proporsi: "0,00",
+        proporsi_rumus_fase_1:
+          typeof selectedData?.proporsi_rumus_fase_1 === "number"
+            ? selectedData?.proporsi_rumus_fase_1
+            : selectedData?.proporsi_rumus_fase_1
+            ? String(selectedData?.proporsi_rumus_fase_1)
+            : undefined,
+        catatan_pemeriksa: "",
+      };
+    }
 
     switch (fieldName) {
       case "akuntansi":
@@ -243,7 +284,8 @@ const Detail: NextPage = () => {
                   data?.id.toString() === selectedID
                     ? "default"
                     : checkVerifSync(
-                        dataVerifications[key].verifikasi_akuntansi,
+                        // guard: gunakan optional chaining / default jika dataVerifications[key] belum ada
+                        dataVerifications[key]?.verifikasi_akuntansi || "0",
                         cleanCurrencyFormat(data.verifikasi_akuntansi || "0")
                       )
                 }
