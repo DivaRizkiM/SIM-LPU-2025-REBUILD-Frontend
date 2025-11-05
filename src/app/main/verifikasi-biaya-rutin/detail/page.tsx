@@ -444,21 +444,27 @@ const Detail: NextPage = () => {
                   <div className="grid gap-2 md:grid-cols-4 items-center">
                     <Label>Nominal Verifikasi</Label>
                     <CurrencyInput
+                      // prefer editable value from dataVerifications (initialized earlier),
+                      // otherwise fallback to computed value for LTK/NPP or selectedData.verifikasi
                       value={
-                        isLTK
+                        dataVerifications[indexSelected]?.verifikasi ||
+                        (isLTK
                           ? cleanCurrencyFormat(
-                              (selectedData?.verifikasi ?? selectedData?.hasil_perhitungan_fase_3) || ""
+                              (selectedData?.verifikasi ??
+                                selectedData?.hasil_perhitungan_fase_3) ||
+                                ""
                             )
                           : isNPP
                           ? cleanCurrencyFormat(
-                              (selectedData?.verifikasi ?? selectedData?.biaya_per_npp) || ""
+                              (selectedData?.verifikasi ??
+                                selectedData?.biaya_per_npp) ||
+                                ""
                             )
-                          : dataVerifications[indexSelected]?.verifikasi ||
-                            selectedData?.verifikasi ||
-                            ""
+                          : selectedData?.verifikasi || "")
                       }
                       name="verifikasi"
                       className="w-full col-span-3"
+                      onChange={handleInput}
                     />
                   </div>
                 </>
