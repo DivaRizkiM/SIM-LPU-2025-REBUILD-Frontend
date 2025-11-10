@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState } from "react";
 import { BiayaLtkI, columns } from "./columns";
 import { DataTable } from "./data-table";
@@ -9,13 +9,12 @@ import { Calculator } from "lucide-react";
 import { QueryParams, buildQueryParam } from "../../../../helper";
 import useSWR from "swr";
 
-
 export default function BiayaLtk() {
-  const router = useRouter()
-  const [queryParams, setQueryParams] = useState<string>('')
+  const router = useRouter();
+  const [queryParams, setQueryParams] = useState<string>("");
 
   const { data, error, isLoading } = useSWR(
-    ['BiayaLtk', queryParams ? queryParams : '?'],
+    ["BiayaLtk", queryParams ? queryParams : "?"],
     (key) => fetcher(key[1])
   );
   const dataSource: BiayaLtkI[] = data?.data || [];
@@ -24,7 +23,17 @@ export default function BiayaLtk() {
   const fetcher = async (params: string) => {
     try {
       const response = await getLtk(router, params);
-      return response.data;
+      // normalize id to string to avoid JS number precision loss for large integers
+      const normalized = {
+        ...response.data,
+        data: Array.isArray(response.data.data)
+          ? response.data.data.map((item: any) => ({
+              ...item,
+              id: String(item.id),
+            }))
+          : response.data.data,
+      };
+      return normalized;
     } catch (err: any) {
       toast({
         title: err.response?.data?.message || err.message,
@@ -34,26 +43,21 @@ export default function BiayaLtk() {
     }
   };
 
-  const firstInit = async (
-    tahun = "",
-    bulan = "",
-  ) => {
-
+  const firstInit = async (tahun = "", bulan = "") => {
     const tempParams: QueryParams = {};
     if (tahun && tahun !== "all") tempParams.tahun = tahun;
     if (bulan && bulan !== "all") tempParams.bulan = bulan;
 
     const params = buildQueryParam(tempParams) || "";
-    setQueryParams(params)
+    setQueryParams(params);
   };
 
   if (error) {
     toast({
-      title: error?.message || 'Something wrong..',
-      variant: 'destructive'
-    })
+      title: error?.message || "Something wrong..",
+      variant: "destructive",
+    });
   }
-
 
   return (
     <div className="px-2 md:px-4 py-1 md:py-2">
@@ -68,8 +72,8 @@ export default function BiayaLtk() {
       />
       <footer className="absolute h-[40px] backdrop-blur bg-primary/70 w-full bottom-0 right-0 space-x-2 flex justify-end items-center p-1 pe-8 text-sm">
         <Calculator className="h-4 w-4 me-1" />
-        Grand Total :  <span className="font-bold">{grandTotal}</span>
+        Grand Total : <span className="font-bold">{grandTotal}</span>
       </footer>
     </div>
-  )
+  );
 }
