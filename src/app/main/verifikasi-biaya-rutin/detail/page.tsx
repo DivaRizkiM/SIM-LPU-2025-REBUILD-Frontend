@@ -137,10 +137,18 @@ const Detail: NextPage = () => {
             const isLTKItem = String(data.kode_rekening ?? "") === "5000000010";
             const isNPPItem = NPP_CODES.has(String(data.kode_rekening ?? ""));
             const autoValue = isLTKItem
-            ? data.verifikasi ?? data.hasil_perhitungan_fase_3
-            : isNPPItem
-            ? data.verifikasi ?? data.biaya_per_npp
-            : data.verifikasi;
+              ? !data.verifikasi ||
+                data.verifikasi === "0,00" ||
+                cleanCurrencyFormat(data.verifikasi) === "0"
+                ? data.hasil_perhitungan_fase_3
+                : data.verifikasi
+              : isNPPItem
+              ? !data.verifikasi ||
+                data.verifikasi === "0,00" ||
+                cleanCurrencyFormat(data.verifikasi) === "0"
+                ? data.biaya_per_npp
+                : data.verifikasi
+              : data.verifikasi;
             return {
               id_verifikasi_biaya_rutin_detail:
                 data.id_verifikasi_biaya_rutin_detail,
