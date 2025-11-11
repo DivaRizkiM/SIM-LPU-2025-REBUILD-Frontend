@@ -450,14 +450,14 @@ const Detail: NextPage = () => {
                         dataVerifications[indexSelected]?.verifikasi ||
                         (isLTK
                           ? cleanCurrencyFormat(
-                              (selectedData?.hasil_perhitungan_fase_3 ??
-                                selectedData?.verifikasi) ||
+                              (selectedData?.verifikasi ??
+                                selectedData?.hasil_perhitungan_fase_3) ||
                                 ""
                             )
                           : isNPP
                           ? cleanCurrencyFormat(
-                              (selectedData?.biaya_per_npp ??
-                                selectedData?.verifikasi) ||
+                              (selectedData?.verifikasi ??
+                                selectedData?.biaya_per_npp) ||
                                 ""
                             )
                           : selectedData?.verifikasi || "")
