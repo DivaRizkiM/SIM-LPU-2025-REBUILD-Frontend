@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import Combobox from "@/components/tools/combobox";
 import { useEffect, useState } from "react";
 import { FormCustomOption } from "../../../../../store/state";
-import { getExportPerbaikanRingan, getKabKota, getKecamatan, getKelurahan, getPerbaikanRingan, getProvinsi } from "../../../../../services";
+import { getExportVerifikasiPemeliharaanKantor, getKabKota, getKecamatan, getKelurahan, getVerifikasiPemeliharaanKantor, getProvinsi } from "../../../../../services";
 import { useRouter } from "next/navigation";
-import { KabKotaI, KecamatanI, KelurahanI, PerbaikanRinganI, ProvinsiI } from "../../../../../services/types";
+import { KabKotaI, KecamatanI, KelurahanI, VerifikasiPemeliharaanKantorI, ProvinsiI } from "../../../../../services/types";
 import { QueryParams, buildQueryParam, isLastPage } from "../../../../../helper";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -34,13 +34,13 @@ const FormSchema = z.object({
     bulan: z.string().optional(),
 })
 
-const MonitoringKantorUsulan:NextPage = ()=>{
+const VerifikasiPemeliharaanKantor:NextPage = ()=>{
     const router = useRouter()
     const [page, setPage] = useState<number>(1);
     const pageSize:number = 10;
     const [offset,setOffset] = useState<number>(0)
     const [isLoading, setIsLoading] = useState<boolean>(false)
-    const [dataSource, setDataSource] = useState<PerbaikanRinganI[]>()
+    const [dataSource, setDataSource] = useState<VerifikasiPemeliharaanKantorI[]>()
     const [isExportLoading,setIsExportLoading] = useState<boolean>(false)
 
     const form = useForm<z.infer<typeof FormSchema>>({
@@ -121,7 +121,7 @@ const MonitoringKantorUsulan:NextPage = ()=>{
         tempParams.limit = pageSize.toString()
         const params = buildQueryParam(tempParams) || '';
         if (offset < 0)return
-        await getPerbaikanRingan(router, params)
+        await getVerifikasiPemeliharaanKantor(router, params)
         .then((res)=> {
             const { 
                 offset,
@@ -173,7 +173,7 @@ const MonitoringKantorUsulan:NextPage = ()=>{
         }
 
         const params = buildQueryParam(tempParams) || '';
-        await getExportPerbaikanRingan(router,params)
+        await getExportVerifikasiPemeliharaanKantor(router,params)
             .then((res)=>{
                 const url = window.URL.createObjectURL((res.data as any));
                 const a = document.createElement('a');
@@ -413,7 +413,7 @@ const MonitoringKantorUsulan:NextPage = ()=>{
                     />
                 </form>
             </Form>
-            <h1 className="text-center my-7 md:my-3 font-bold">Monitoring Kantor Usulan</h1>
+            <h1 className="text-center my-7 md:my-3 font-bold">Verifikasi Pemeliharaan Kantor</h1>
             <div className={`relative overflow-x-scroll`}>
                 <table className={style.table}>
                     <thead className="[&:nth-child(3):bg-red-900]">
@@ -483,4 +483,4 @@ const MonitoringKantorUsulan:NextPage = ()=>{
         </div>
     )
 }
-export default MonitoringKantorUsulan
+export default VerifikasiPemeliharaanKantor

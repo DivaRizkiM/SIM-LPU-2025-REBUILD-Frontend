@@ -496,7 +496,7 @@ export interface VerifikasiLapanganI {
   nilai_akhir: number;
   kesimpulan: string;
 }
-export interface PerbaikanRinganI {
+export interface VerifikasiPemeliharaanKantorI {
   id: number;
   tanggal: string;  // Format date-time string
   petugas_list: Petugas[];
