@@ -350,11 +350,11 @@ const Dashboard = ({
                                             module_name: ModuleName.LAPORAN_VERIFIKASI_LAPANGAN
                                         },
                                         {
-                                            title: "Perbaikan Ringan",
+                                            title: "Verifikasi Pemeliharaan Kantor",
                                             label: "",
                                             variant: "ghost",
-                                            url: '/main/laporan/perbaikan-ringan',
-                                            module_name: ModuleName.LAPORAN_PERBAIKAN_RINGAN
+                                            url: '/main/laporan/verifikasi-pemeliharaan-kantor',
+                                            module_name: ModuleName.LAPORAN_VERIFIKASI_PEMELIHARAAN_KANTOR
                                         },
                                     ]
                                 },

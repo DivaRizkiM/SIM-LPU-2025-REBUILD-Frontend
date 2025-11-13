@@ -46,7 +46,7 @@ export enum ModuleName {
 	LAPORAN_MONITORING_KANTOR_EXISTING = "laporan_monitoring_kantor_existing",
 	LAPORAN_MONITORING_KANTOR_USULAN = "laporan_monitoring_kantor_usulan",
 	LAPORAN_VERIFIKASI_LAPANGAN = "laporan_verifikasi_lapangan",
-	LAPORAN_PERBAIKAN_RINGAN = "laporan_perbaikan_ringan",
+	LAPORAN_VERIFIKASI_PEMELIHARAAN_KANTOR = "laporan_verifikasi_pemeliharaan_kantor",
 	MANAJEMEN_API = "manajemen_api",
 	SYNC_LOG = "sync_log",
 	USER_LOG = "user_log",

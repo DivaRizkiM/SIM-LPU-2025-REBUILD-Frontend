@@ -925,24 +925,24 @@ export const getExportVerifikasiLapangan = (
   );
 };
 // Laporan Perbaikan Ringan
-export const getPerbaikanRingan = (
+export const getVerifikasiPemeliharaanKantor = (
   router: AppRouterInstance,
   payload: any,
 ) => {
   return UseGuardInstance(router).get<
     ResponseAPI
   >(
-    `/perbaikan-ringan${payload}`
+    `/verifikasi-pemeliharaan-kantor${payload}`
   );
 };
-export const getExportPerbaikanRingan = (
+export const getExportVerifikasiPemeliharaanKantor = (
   router: AppRouterInstance,
   payload: any,
 ) => {
   return UseGuardInstance(router).get<
     ResponseAPI
   >(
-    `/perbaikan-ringan/export${payload}`, {
+    `/verifikasi-pemeliharaan-kantor/export${payload}`, {
     responseType: 'blob'
   }
   );
