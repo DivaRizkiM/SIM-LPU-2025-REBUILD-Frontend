@@ -18,8 +18,8 @@ export interface BiayaLtkI {
   verifikasi_akuntansi: string
   biaya_pso: string
   verifikasi_pso: string
-  mtd_biaya: string
-  mtd_biaya_hasil: string
+  mtd_ltk_pelaporan: string
+  mtd_ltk_verifikasi: string
   proporsi_rumus: string
   verifikasi_proporsi: string
   isLock: boolean
@@ -144,40 +144,40 @@ export const columns: ColumnDef<BiayaLtkI>[] = [
     }
   },
   {
-    accessorKey: "mtd_biaya",
+    accessorKey: "mtd_ltk_pelaporan",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          MTD Biaya
+          MTD LTK Pelaporan
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
     cell: ({ row }) => {
       return (
-        <div className="text-center">Rp. {numFormatter(row.original.mtd_biaya)}</div>
+        <div className="text-center">Rp. {numFormatter(row.original.mtd_ltk_pelaporan)}</div>
       )
     }
   },
   {
-    accessorKey: "mtd_biaya_hasil",
+    accessorKey: "mtd_ltk_verifikasi",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          MTD Biaya Final
+          MTD LTK Verifikasi
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
     },
     cell: ({ row }) => {
       return (
-        <div className="text-center">Rp. {numFormatter(row.original.mtd_biaya_hasil)}</div>
+        <div className="text-center">Rp. {numFormatter(row.original.mtd_ltk_verifikasi)}</div>
       )
     }
   },

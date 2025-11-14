@@ -556,8 +556,6 @@ export interface LtkI {
   total_produksi_ltk_nasional?: string;
   produksi_ltk_kantor_lpu?: string;
   hasil_joint_cost?: string;
-  mtd_biaya_pos: string;
-  mtd_biaya_hasil: string;
   proporsi_rumus: string;
   verifikasi_proporsi: string;
   rumus_fase_1: string;
@@ -569,6 +567,8 @@ export interface LtkI {
   perhitungan_full_cost?: string;
   proporsi_rumus_fase_1?: string;
   hasil_full_cost?: string;
+  mtd_ltk_pelaporan?: string;
+  mtd_ltk_verifikasi?: string;
 }
 
 export interface IFormLtkVerifikasi {
@@ -578,7 +578,9 @@ export interface IFormLtkVerifikasi {
   verifikasi_pso: string;
   isVerifikasiPsoSesuai?: "0" | "1" | ""
   verifikasi_proporsi: string;
+  mtd_ltk_verifikasi: string;
   isVerifikasiProporsiSesuai?: "0" | "1" | ""
   proporsi_rumus_fase_1?: string;
   catatan_pemeriksa?: string;
+  isMtdLtkVerifikasiSesuai?: "0" | "1" | "";
 }
