@@ -570,11 +570,11 @@ const Detail: NextPage = () => {
                 <div className="grid gap-2 md:grid-cols-4 items-center">
                   <Label>MTD LTK Verifikasi</Label>
                   <Input
-                    value={
+                    value={'Rp ' +
                       dataVerifications[indexSelected]?.mtd_ltk_verifikasi ||
                       "0"
                     }
-                    className="w-full col-span-3 bg-secondary font-semibold"
+                    className="w-full col-span-3 bg-secondary"
                     readOnly
                   />
                 </div>
