@@ -173,7 +173,6 @@ const Detail: NextPage = () => {
     if (indexSelected >= 0) {
       const tempData = [...dataVerifications];
 
-      // guard / init entry jika belum ada
       if (!tempData[indexSelected]) {
         tempData[indexSelected] = {
           id_ltk: selectedData?.id.toString() || "",
@@ -202,11 +201,8 @@ const Detail: NextPage = () => {
 
       // Auto-calculate MTD LTK Verifikasi untuk non-special kode rekening
       if (!isSpecialKodeRekening) {
-        // Parse value yang sudah dalam format currency (Rp 57.339.200)
         const parseToNumber = (val: string) => {
-          // Hapus "Rp", spasi, dan titik pemisah ribuan
           const cleaned = val.replace(/Rp\s?/g, "").replace(/\./g, "");
-          // Ubah koma desimal jadi titik
           const normalized = cleaned.replace(/,/g, ".");
           return parseFloat(normalized) || 0;
         };
@@ -222,11 +218,13 @@ const Detail: NextPage = () => {
 
         console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
 
-        // Handle negative value
-        const formattedResult =
-          result < 0
-            ? `-${formatCurrency(Math.abs(result).toString())}`
-            : formatCurrency(result.toString());
+        // Format dengan prefix Rp dan handle negative
+        let formatted = formatCurrency(Math.abs(result).toString());
+        // Pastikan ada prefix Rp
+        if (!formatted.startsWith("Rp")) {
+          formatted = "Rp " + formatted;
+        }
+        const formattedResult = result < 0 ? `-${formatted}` : formatted;
 
         tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
       }
@@ -262,11 +260,8 @@ const Detail: NextPage = () => {
       };
     }
 
-    // Helper function untuk parse currency string ke number
     const parseToNumber = (val: string) => {
-      // Hapus "Rp", spasi, dan titik pemisah ribuan
       const cleaned = val.replace(/Rp\s?/g, "").replace(/\./g, "");
-      // Ubah koma desimal jadi titik
       const normalized = cleaned.replace(/,/g, ".");
       return parseFloat(normalized) || 0;
     };
@@ -280,7 +275,6 @@ const Detail: NextPage = () => {
           val === "1" ? mtdAkuntansiValue : "0,00";
         tempData[indexSelected].isVerifikasiAkuntansiSesuai = val;
 
-        // Auto-calculate MTD LTK Verifikasi untuk non-special
         if (!isSpecialKodeRekening) {
           const akuntansi = parseToNumber(
             val === "1" ? selectedData?.mtd_akuntansi || "0" : "0"
@@ -293,11 +287,12 @@ const Detail: NextPage = () => {
 
           console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
 
-          // Handle negative value
-          const formattedResult =
-            result < 0
-              ? `-${formatCurrency(Math.abs(result).toString())}`
-              : formatCurrency(result.toString());
+          // Format dengan prefix Rp dan handle negative
+          let formatted = formatCurrency(Math.abs(result).toString());
+          if (!formatted.startsWith("Rp")) {
+            formatted = "Rp " + formatted;
+          }
+          const formattedResult = result < 0 ? `-${formatted}` : formatted;
 
           tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
         }
@@ -311,7 +306,6 @@ const Detail: NextPage = () => {
           val === "1" ? biayaPsoValue : "0,00";
         tempData[indexSelected].isVerifikasiPsoSesuai = val;
 
-        // Auto-calculate MTD LTK Verifikasi untuk non-special
         if (!isSpecialKodeRekening) {
           const akuntansi = parseToNumber(
             tempData[indexSelected].verifikasi_akuntansi || "0"
@@ -324,11 +318,12 @@ const Detail: NextPage = () => {
 
           console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
 
-          // Handle negative value
-          const formattedResult =
-            result < 0
-              ? `-${formatCurrency(Math.abs(result).toString())}`
-              : formatCurrency(result.toString());
+          // Format dengan prefix Rp dan handle negative
+          let formatted = formatCurrency(Math.abs(result).toString());
+          if (!formatted.startsWith("Rp")) {
+            formatted = "Rp " + formatted;
+          }
+          const formattedResult = result < 0 ? `-${formatted}` : formatted;
 
           tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
         }
@@ -571,9 +566,10 @@ const Detail: NextPage = () => {
                   <Label>MTD LTK Verifikasi</Label>
                   <Input
                     value={
-                      dataVerifications[indexSelected]?.mtd_ltk_verifikasi || "0"
+                      dataVerifications[indexSelected]?.mtd_ltk_verifikasi ||
+                      "0"
                     }
-                    className="w-full col-span-3 bg-secondary font-semibold"
+                    className="w-full col-span-3 bg-secondary"
                     readOnly
                   />
                 </div>
