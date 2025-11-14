@@ -27,6 +27,9 @@ import { ReloadIcon } from "@radix-ui/react-icons";
 import { DownloadCloud, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+// Kode rekening khusus yang MTD LTK Verifikasi nya editable
+const SPECIAL_KODE_REKENING = ["5102070003", "5000000015", "5000000014"];
+
 const Detail: NextPage = () => {
   const router = useRouter();
   const params = useParams<{ id_ltk: string }>();
@@ -40,6 +43,11 @@ const Detail: NextPage = () => {
   >([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Check apakah kode rekening termasuk special
+  const isSpecialKodeRekening = SPECIAL_KODE_REKENING.includes(
+    String(selectedData?.kode_rekening || "")
+  );
 
   const firstInit = async () => {
     const payload = `?id_ltk=${params.id_ltk}`;
@@ -57,16 +65,37 @@ const Detail: NextPage = () => {
 
         const tempDataVerifs: IFormLtkVerifikasi[] = dataResponse.map(
           (data) => {
+            const isSpecial = SPECIAL_KODE_REKENING.includes(
+              String(data.kode_rekening || "")
+            );
+
+            // Untuk non-special: MTD LTK Verifikasi = Verifikasi Akuntansi - Biaya PSO
+            let calculatedMtdLtkVerifikasi = data.mtd_ltk_verifikasi || "0,00";
+            if (!isSpecial) {
+              const akuntansi = parseFloat(
+                cleanCurrencyFormat(data.verifikasi_akuntansi || "0,00")
+              );
+              const pso = parseFloat(
+                cleanCurrencyFormat(data.verifikasi_pso || "0,00")
+              );
+              calculatedMtdLtkVerifikasi = formatCurrency(
+                (akuntansi - pso).toString()
+              );
+            }
+
             return {
               id_ltk: data.id.toString(),
-              verifikasi_akuntansi: data.verifikasi_akuntansi || "0,00",
-              isVerifikasiAkuntansiSesuai:
-                cleanCurrencyFormat(data.verifikasi_akuntansi) === "0,00"
-                  ? ""
-                  : cleanCurrencyFormat(data.verifikasi_akuntansi || "0,00") ===
-                    cleanCurrencyFormat(data.mtd_akuntansi || "0,00")
-                  ? "1"
-                  : "0",
+              verifikasi_akuntansi: isSpecial
+                ? cleanCurrencyFormat(data.mtd_akuntansi || "0,00")
+                : data.verifikasi_akuntansi || "0,00",
+              isVerifikasiAkuntansiSesuai: isSpecial
+                ? "1" // Auto sesuai untuk special kode
+                : cleanCurrencyFormat(data.verifikasi_akuntansi) === "0,00"
+                ? ""
+                : cleanCurrencyFormat(data.verifikasi_akuntansi || "0,00") ===
+                  cleanCurrencyFormat(data.mtd_akuntansi || "0,00")
+                ? "1"
+                : "0",
               isVerifikasiProporsiSesuai:
                 cleanCurrencyFormat(data.verifikasi_proporsi) === "0,00"
                   ? ""
@@ -74,14 +103,17 @@ const Detail: NextPage = () => {
                     cleanCurrencyFormat(data.proporsi_rumus || "0,00")
                   ? "1"
                   : "0",
-              isVerifikasiPsoSesuai:
-                cleanCurrencyFormat(data.verifikasi_pso) === "0,00"
-                  ? ""
-                  : cleanCurrencyFormat(data.verifikasi_pso || "0") ===
-                    cleanCurrencyFormat(data.biaya_pso || "0,00")
-                  ? "1"
-                  : "0",
-              verifikasi_pso: data.verifikasi_pso || "0,00",
+              isVerifikasiPsoSesuai: isSpecial
+                ? "1" // Auto sesuai untuk special kode
+                : cleanCurrencyFormat(data.verifikasi_pso) === "0,00"
+                ? ""
+                : cleanCurrencyFormat(data.verifikasi_pso || "0") ===
+                  cleanCurrencyFormat(data.biaya_pso || "0,00")
+                ? "1"
+                : "0",
+              verifikasi_pso: isSpecial
+                ? cleanCurrencyFormat(data.biaya_pso || "0,00")
+                : data.verifikasi_pso || "0,00",
               verifikasi_proporsi: data.verifikasi_proporsi || "0,00",
               proporsi_rumus_fase_1:
                 typeof data.proporsi_rumus_fase_1 === "number"
@@ -90,6 +122,17 @@ const Detail: NextPage = () => {
                   ? String(data.proporsi_rumus_fase_1)
                   : undefined,
               catatan_pemeriksa: data.catatan_pemeriksa || "",
+              // MTD LTK Verifikasi
+              mtd_ltk_verifikasi: calculatedMtdLtkVerifikasi,
+              isMtdLtkVerifikasiSesuai: isSpecial
+                ? cleanCurrencyFormat(data.mtd_ltk_verifikasi || "0,00") ===
+                  "0,00"
+                  ? ""
+                  : cleanCurrencyFormat(data.mtd_ltk_verifikasi || "0,00") ===
+                    cleanCurrencyFormat(data.mtd_ltk_pelaporan || "0,00")
+                  ? "1"
+                  : "0"
+                : "1",
             };
           }
         );
@@ -102,6 +145,7 @@ const Detail: NextPage = () => {
         setIsLoading(false);
       });
   };
+
   useEffect(() => {
     firstInit();
     /* eslint-disable react-hooks/exhaustive-deps */
@@ -146,24 +190,57 @@ const Detail: NextPage = () => {
               ? String(selectedData?.proporsi_rumus_fase_1)
               : undefined,
           catatan_pemeriksa: "",
+          mtd_ltk_verifikasi: "0,00",
+          isMtdLtkVerifikasiSesuai: "",
         };
       }
 
       tempData[indexSelected] = {
         ...tempData[indexSelected],
-        [eventName]: value, // biarkan value langsung, agar proporsi_rumus_fase_1 bisa diubah
+        [eventName]: value,
       };
+
+      // Auto-calculate MTD LTK Verifikasi untuk non-special kode rekening
+      if (!isSpecialKodeRekening) {
+        // Parse value yang sudah dalam format currency (Rp 57.339.200)
+        const parseToNumber = (val: string) => {
+          // Hapus "Rp", spasi, dan titik pemisah ribuan
+          const cleaned = val.replace(/Rp\s?/g, "").replace(/\./g, "");
+          // Ubah koma desimal jadi titik
+          const normalized = cleaned.replace(/,/g, ".");
+          return parseFloat(normalized) || 0;
+        };
+
+        const akuntansi = parseToNumber(
+          tempData[indexSelected].verifikasi_akuntansi || "0"
+        );
+        const pso = parseToNumber(
+          tempData[indexSelected].verifikasi_pso || "0"
+        );
+
+        const result = akuntansi - pso;
+
+        console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
+
+        // Handle negative value
+        const formattedResult =
+          result < 0
+            ? `-${formatCurrency(Math.abs(result).toString())}`
+            : formatCurrency(result.toString());
+
+        tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
+      }
+
       setDataVerifications(tempData);
     }
   }
 
   const selectHandler = (
     val: "0" | "1",
-    fieldName: "akuntansi" | "pso" | "proporsi"
+    fieldName: "akuntansi" | "pso" | "proporsi" | "mtd_ltk"
   ) => {
     const tempData = [...dataVerifications];
 
-    // guard / init entry jika belum ada
     if (!tempData[indexSelected]) {
       tempData[indexSelected] = {
         id_ltk: selectedData?.id.toString() || "",
@@ -180,24 +257,81 @@ const Detail: NextPage = () => {
             ? String(selectedData?.proporsi_rumus_fase_1)
             : undefined,
         catatan_pemeriksa: "",
+        mtd_ltk_verifikasi: "0,00",
+        isMtdLtkVerifikasiSesuai: "",
       };
     }
 
+    // Helper function untuk parse currency string ke number
+    const parseToNumber = (val: string) => {
+      // Hapus "Rp", spasi, dan titik pemisah ribuan
+      const cleaned = val.replace(/Rp\s?/g, "").replace(/\./g, "");
+      // Ubah koma desimal jadi titik
+      const normalized = cleaned.replace(/,/g, ".");
+      return parseFloat(normalized) || 0;
+    };
+
     switch (fieldName) {
       case "akuntansi":
+        const mtdAkuntansiValue = cleanCurrencyFormat(
+          selectedData?.mtd_akuntansi || "0,00"
+        );
         tempData[indexSelected].verifikasi_akuntansi =
-          val === "1"
-            ? cleanCurrencyFormat(selectedData?.mtd_akuntansi || "0,00")
-            : "0,00";
+          val === "1" ? mtdAkuntansiValue : "0,00";
         tempData[indexSelected].isVerifikasiAkuntansiSesuai = val;
+
+        // Auto-calculate MTD LTK Verifikasi untuk non-special
+        if (!isSpecialKodeRekening) {
+          const akuntansi = parseToNumber(
+            val === "1" ? selectedData?.mtd_akuntansi || "0" : "0"
+          );
+          const pso = parseToNumber(
+            tempData[indexSelected].verifikasi_pso || "0"
+          );
+
+          const result = akuntansi - pso;
+
+          console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
+
+          // Handle negative value
+          const formattedResult =
+            result < 0
+              ? `-${formatCurrency(Math.abs(result).toString())}`
+              : formatCurrency(result.toString());
+
+          tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
+        }
         break;
 
       case "pso":
+        const biayaPsoValue = cleanCurrencyFormat(
+          selectedData?.biaya_pso || "0,00"
+        );
         tempData[indexSelected].verifikasi_pso =
-          val === "1"
-            ? cleanCurrencyFormat(selectedData?.biaya_pso || "0,00")
-            : "0,00";
+          val === "1" ? biayaPsoValue : "0,00";
         tempData[indexSelected].isVerifikasiPsoSesuai = val;
+
+        // Auto-calculate MTD LTK Verifikasi untuk non-special
+        if (!isSpecialKodeRekening) {
+          const akuntansi = parseToNumber(
+            tempData[indexSelected].verifikasi_akuntansi || "0"
+          );
+          const pso = parseToNumber(
+            val === "1" ? selectedData?.biaya_pso || "0" : "0"
+          );
+
+          const result = akuntansi - pso;
+
+          console.log("Akuntansi:", akuntansi, "PSO:", pso, "Result:", result);
+
+          // Handle negative value
+          const formattedResult =
+            result < 0
+              ? `-${formatCurrency(Math.abs(result).toString())}`
+              : formatCurrency(result.toString());
+
+          tempData[indexSelected].mtd_ltk_verifikasi = formattedResult;
+        }
         break;
 
       case "proporsi":
@@ -206,6 +340,14 @@ const Detail: NextPage = () => {
             ? cleanCurrencyFormat(selectedData?.proporsi_rumus || "0,00")
             : "0,00";
         tempData[indexSelected].isVerifikasiProporsiSesuai = val;
+        break;
+
+      case "mtd_ltk":
+        tempData[indexSelected].mtd_ltk_verifikasi =
+          val === "1"
+            ? cleanCurrencyFormat(selectedData?.mtd_ltk_pelaporan || "0,00")
+            : "0,00";
+        tempData[indexSelected].isMtdLtkVerifikasiSesuai = val;
         break;
 
       default:
@@ -228,6 +370,7 @@ const Detail: NextPage = () => {
             ? String(data.proporsi_rumus_fase_1)
             : "0",
         catatan_pemeriksa: data.catatan_pemeriksa || "",
+        mtd_ltk_verifikasi: data.mtd_ltk_verifikasi || "0",
       };
     });
     const payload = {
@@ -264,6 +407,7 @@ const Detail: NextPage = () => {
         return "warning";
     }
   };
+
   return (
     <div className="relative px-2 md:px-4 py-1 md:py-2 h-full overflow-hidden">
       {isLoading && (
@@ -284,7 +428,6 @@ const Detail: NextPage = () => {
                   data?.id.toString() === selectedID
                     ? "default"
                     : checkVerifSync(
-                        // guard: gunakan optional chaining / default jika dataVerifications[key] belum ada
                         dataVerifications[key]?.verifikasi_akuntansi || "0",
                         cleanCurrencyFormat(data.verifikasi_akuntansi || "0")
                       )
@@ -334,21 +477,109 @@ const Detail: NextPage = () => {
                 />
               </div>
               <div className="grid gap-2 md:grid-cols-4 items-center">
-                <Label>MTD Biaya</Label>
+                <Label>MTD LTK Pelaporan</Label>
                 <Input
-                  value={selectedData?.mtd_akuntansi || "0"}
+                  value={selectedData?.mtd_ltk_pelaporan || "0"}
                   className="w-full col-span-3 bg-secondary"
                   readOnly
                 />
               </div>
-              <div className="grid gap-2 md:grid-cols-4 items-center">
-                <Label>MTD Biaya Final</Label>
-                <Input
-                  value={selectedData?.mtd_biaya_hasil || "0"}
-                  className="w-full col-span-3 bg-secondary"
-                  readOnly
-                />
-              </div>
+
+              {/* MTD LTK Verifikasi - Conditional Rendering */}
+              {isSpecialKodeRekening ? (
+                <>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        Pilih Kondisi <span className="text-red-500">*</span>
+                      </Label>
+                      {!dataVerifications[indexSelected]
+                        ?.isMtdLtkVerifikasiSesuai && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <div className="w-full col-span-3">
+                      <Select
+                        value={
+                          dataVerifications[indexSelected]
+                            ?.isMtdLtkVerifikasiSesuai
+                        }
+                        onValueChange={(val: "0" | "1") =>
+                          selectHandler(val, "mtd_ltk")
+                        }
+                      >
+                        <SelectTrigger
+                          className={
+                            !dataVerifications[indexSelected]
+                              ?.isMtdLtkVerifikasiSesuai
+                              ? "border-red-600"
+                              : ""
+                          }
+                        >
+                          <SelectValue placeholder="Pilih Kondisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="1">Sesuai</SelectItem>
+                            <SelectItem value="0">Tidak Sesuai</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        MTD LTK Verifikasi{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      {dataVerifications[indexSelected]?.mtd_ltk_verifikasi ===
+                        "" && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <CurrencyInput
+                      value={
+                        dataVerifications[indexSelected]?.mtd_ltk_verifikasi
+                      }
+                      name="mtd_ltk_verifikasi"
+                      className={`
+                        w-full col-span-3 
+                        ${
+                          dataVerifications[indexSelected]
+                            ?.isMtdLtkVerifikasiSesuai === "1"
+                            ? "bg-secondary"
+                            : ""
+                        }
+                        ${
+                          dataVerifications[indexSelected]
+                            ?.mtd_ltk_verifikasi === ""
+                            ? "border-red-600"
+                            : ""
+                        }
+                      `}
+                      readOnly={
+                        dataVerifications[indexSelected]
+                          ?.isMtdLtkVerifikasiSesuai === "1"
+                      }
+                      onChange={handleInput}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-4 items-center">
+                  <Label>MTD LTK Verifikasi</Label>
+                  <Input
+                    value={
+                      dataVerifications[indexSelected]?.mtd_ltk_verifikasi ||
+                      "0"
+                    }
+                    className="w-full col-span-3 bg-secondary font-semibold"
+                    readOnly
+                  />
+                </div>
+              )}
+
               <div className="flex gap-4 items-center mt-4">
                 <Label className="font-semibold text-lg">Lampiran: </Label>
                 {selectedData &&
@@ -371,172 +602,208 @@ const Detail: NextPage = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <Label>MTD Akuntansi</Label>
-                  <Input
-                    value={selectedData?.mtd_akuntansi}
-                    className="w-full col-span-3 bg-secondary"
-                    readOnly
-                  />
-                </div>
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <div>
-                    <Label>
-                      Pilih Kondisi <span className="text-red-500">*</span>
-                    </Label>
-                    {!dataVerifications[indexSelected]
-                      ?.isVerifikasiAkuntansiSesuai && (
-                      <div className="text-xs text-red-600">Wajib diisi</div>
-                    )}
+              {/* MTD Akuntansi Section - Conditional based on kode_rekening */}
+              {!isSpecialKodeRekening && (
+                <div className="space-y-2">
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <Label>MTD Akuntansi</Label>
+                    <Input
+                      value={selectedData?.mtd_akuntansi}
+                      className="w-full col-span-3 bg-secondary"
+                      readOnly
+                    />
                   </div>
-                  <div className="w-full col-span-3">
-                    <Select
-                      value={
-                        dataVerifications[indexSelected]
-                          ?.isVerifikasiAkuntansiSesuai
-                      }
-                      onValueChange={(val: "0" | "1") =>
-                        selectHandler(val, "akuntansi")
-                      }
-                    >
-                      <SelectTrigger
-                        className={
-                          !dataVerifications[indexSelected]
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        Pilih Kondisi <span className="text-red-500">*</span>
+                      </Label>
+                      {!dataVerifications[indexSelected]
+                        ?.isVerifikasiAkuntansiSesuai && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <div className="w-full col-span-3">
+                      <Select
+                        value={
+                          dataVerifications[indexSelected]
                             ?.isVerifikasiAkuntansiSesuai
-                            ? "border-red-600"
-                            : ""
+                        }
+                        onValueChange={(val: "0" | "1") =>
+                          selectHandler(val, "akuntansi")
                         }
                       >
-                        <SelectValue placeholder="Pilih Kondisi" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value="1">Sesuai</SelectItem>
-                          <SelectItem value="0">Tidak Sesuai</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          className={
+                            !dataVerifications[indexSelected]
+                              ?.isVerifikasiAkuntansiSesuai
+                              ? "border-red-600"
+                              : ""
+                          }
+                        >
+                          <SelectValue placeholder="Pilih Kondisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="1">Sesuai</SelectItem>
+                            <SelectItem value="0">Tidak Sesuai</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <div>
-                    <Label>
-                      Nominal Verifikasi <span className="text-red-500">*</span>
-                    </Label>
-                    {dataVerifications[indexSelected]?.verifikasi_akuntansi ===
-                      "" && (
-                      <div className="text-xs text-red-600">Wajib diisi</div>
-                    )}
-                  </div>
-                  <CurrencyInput
-                    value={
-                      dataVerifications[indexSelected]?.verifikasi_akuntansi
-                    }
-                    name="verifikasi_akuntansi"
-                    className={`
-    w-full col-span-3 
-    ${
-      dataVerifications[indexSelected]?.isVerifikasiAkuntansiSesuai === "1"
-        ? "bg-secondary"
-        : ""
-    }
-    ${
-      dataVerifications[indexSelected]?.verifikasi_akuntansi === ""
-        ? "border-red-600"
-        : ""
-    }
-  `}
-                    readOnly={
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiAkuntansiSesuai === "1"
-                    }
-                    onChange={handleInput}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <Label>Biaya PSO</Label>
-                  <Input
-                    value={selectedData?.biaya_pso}
-                    className="w-full col-span-3 bg-secondary"
-                    readOnly
-                  />
-                </div>
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <div>
-                    <Label>
-                      Pilih Kondisi <span className="text-red-500">*</span>
-                    </Label>
-                    {!dataVerifications[indexSelected]
-                      ?.isVerifikasiPsoSesuai && (
-                      <div className="text-xs text-red-600">Wajib diisi</div>
-                    )}
-                  </div>
-                  <div className="w-full col-span-3">
-                    <Select
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        Nominal Verifikasi{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      {dataVerifications[indexSelected]
+                        ?.verifikasi_akuntansi === "" && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <CurrencyInput
                       value={
-                        dataVerifications[indexSelected]?.isVerifikasiPsoSesuai
+                        dataVerifications[indexSelected]?.verifikasi_akuntansi
                       }
-                      onValueChange={(val: "0" | "1") =>
-                        selectHandler(val, "pso")
-                      }
-                    >
-                      <SelectTrigger
-                        className={
-                          !dataVerifications[indexSelected]
-                            ?.isVerifikasiPsoSesuai
+                      name="verifikasi_akuntansi"
+                      className={`
+                        w-full col-span-3 
+                        ${
+                          dataVerifications[indexSelected]
+                            ?.isVerifikasiAkuntansiSesuai === "1"
+                            ? "bg-secondary"
+                            : ""
+                        }
+                        ${
+                          dataVerifications[indexSelected]
+                            ?.verifikasi_akuntansi === ""
                             ? "border-red-600"
                             : ""
                         }
-                      >
-                        <SelectValue placeholder="Pilih Kondisi" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value="1">Sesuai</SelectItem>
-                          <SelectItem value="0">Tidak Sesuai</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                      `}
+                      readOnly={
+                        dataVerifications[indexSelected]
+                          ?.isVerifikasiAkuntansiSesuai === "1"
+                      }
+                      onChange={handleInput}
+                    />
                   </div>
                 </div>
-                <div className="grid gap-2 md:grid-cols-4 items-center">
-                  <div>
-                    <Label>
-                      Nominal Verifikasi <span className="text-red-500">*</span>
-                    </Label>
-                    {dataVerifications[indexSelected]?.verifikasi_pso ===
-                      "" && (
-                      <div className="text-xs text-red-600">Wajib diisi</div>
-                    )}
+              )}
+
+              {/* Biaya PSO Section - Conditional based on kode_rekening */}
+              {!isSpecialKodeRekening && (
+                <div className="space-y-2">
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <Label>Biaya PSO</Label>
+                    <Input
+                      value={selectedData?.biaya_pso}
+                      className="w-full col-span-3 bg-secondary"
+                      readOnly
+                    />
                   </div>
-                  <CurrencyInput
-                    value={dataVerifications[indexSelected]?.verifikasi_pso}
-                    name="verifikasi_pso"
-                    className={`
-                      w-full col-span-3
-                      ${
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        Pilih Kondisi <span className="text-red-500">*</span>
+                      </Label>
+                      {!dataVerifications[indexSelected]
+                        ?.isVerifikasiPsoSesuai && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <div className="w-full col-span-3">
+                      <Select
+                        value={
+                          dataVerifications[indexSelected]
+                            ?.isVerifikasiPsoSesuai
+                        }
+                        onValueChange={(val: "0" | "1") =>
+                          selectHandler(val, "pso")
+                        }
+                      >
+                        <SelectTrigger
+                          className={
+                            !dataVerifications[indexSelected]
+                              ?.isVerifikasiPsoSesuai
+                              ? "border-red-600"
+                              : ""
+                          }
+                        >
+                          <SelectValue placeholder="Pilih Kondisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="1">Sesuai</SelectItem>
+                            <SelectItem value="0">Tidak Sesuai</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <div>
+                      <Label>
+                        Nominal Verifikasi{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      {dataVerifications[indexSelected]?.verifikasi_pso ===
+                        "" && (
+                        <div className="text-xs text-red-600">Wajib diisi</div>
+                      )}
+                    </div>
+                    <CurrencyInput
+                      value={dataVerifications[indexSelected]?.verifikasi_pso}
+                      name="verifikasi_pso"
+                      className={`
+                        w-full col-span-3
+                        ${
+                          dataVerifications[indexSelected]
+                            ?.isVerifikasiPsoSesuai === "1"
+                            ? "bg-secondary"
+                            : ""
+                        }
+                        ${
+                          dataVerifications[indexSelected]?.verifikasi_pso ===
+                          ""
+                            ? "border-red-600"
+                            : ""
+                        }
+                      `}
+                      readOnly={
                         dataVerifications[indexSelected]
                           ?.isVerifikasiPsoSesuai === "1"
-                          ? "bg-secondary"
-                          : ""
                       }
-                      ${
-                        dataVerifications[indexSelected]?.verifikasi_pso === ""
-                          ? "border-red-600"
-                          : ""
-                      }
-                    `}
-                    readOnly={
-                      dataVerifications[indexSelected]
-                        ?.isVerifikasiPsoSesuai === "1"
-                    }
-                    onChange={handleInput}
-                  />
+                      onChange={handleInput}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Show read-only values for special kode rekening */}
+              {isSpecialKodeRekening && (
+                <>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <Label>MTD Akuntansi</Label>
+                    <Input
+                      value={selectedData?.mtd_akuntansi}
+                      className="w-full col-span-3 bg-secondary"
+                      readOnly
+                    />
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-4 items-center">
+                    <Label>Biaya PSO</Label>
+                    <Input
+                      value={selectedData?.biaya_pso}
+                      className="w-full col-span-3 bg-secondary"
+                      readOnly
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <div className="grid gap-2 md:grid-cols-4 items-center">
                   <Label>Jenis Perhitungan</Label>
