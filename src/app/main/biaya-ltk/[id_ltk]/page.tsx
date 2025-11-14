@@ -69,18 +69,40 @@ const Detail: NextPage = () => {
               String(data.kode_rekening || "")
             );
 
+            // Helper function untuk parse currency string ke number
+            const parseToNumber = (val: string) => {
+              // Hapus "Rp", spasi, dan titik pemisah ribuan
+              const cleaned = val.replace(/Rp\s?/g, "").replace(/\./g, "");
+              // Ubah koma desimal jadi titik
+              const normalized = cleaned.replace(/,/g, ".");
+              return parseFloat(normalized) || 0;
+            };
+
             // Untuk non-special: MTD LTK Verifikasi = Verifikasi Akuntansi - Biaya PSO
             let calculatedMtdLtkVerifikasi = data.mtd_ltk_verifikasi || "0,00";
+
             if (!isSpecial) {
-              const akuntansi = parseFloat(
-                cleanCurrencyFormat(data.verifikasi_akuntansi || "0,00")
+              const akuntansi = parseToNumber(
+                data.verifikasi_akuntansi || "0,00"
               );
-              const pso = parseFloat(
-                cleanCurrencyFormat(data.verifikasi_pso || "0,00")
-              );
-              calculatedMtdLtkVerifikasi = formatCurrency(
-                (akuntansi - pso).toString()
-              );
+              const pso = parseToNumber(data.verifikasi_pso || "0,00");
+              const result = akuntansi - pso;
+
+              // Format dengan prefix Rp dan handle negative
+              let formatted = formatCurrency(Math.abs(result).toString());
+              if (!formatted.startsWith("Rp")) {
+                formatted = "Rp " + formatted;
+              }
+              calculatedMtdLtkVerifikasi =
+                result < 0 ? `-${formatted}` : formatted;
+            } else {
+              // Untuk special kode rekening, gunakan nilai dari API langsung
+              // Pastikan ada prefix Rp
+              let mtdValue = data.mtd_ltk_verifikasi || "0,00";
+              if (!mtdValue.startsWith("Rp")) {
+                mtdValue = "Rp " + mtdValue;
+              }
+              calculatedMtdLtkVerifikasi = mtdValue;
             }
 
             return {
@@ -89,7 +111,7 @@ const Detail: NextPage = () => {
                 ? cleanCurrencyFormat(data.mtd_akuntansi || "0,00")
                 : data.verifikasi_akuntansi || "0,00",
               isVerifikasiAkuntansiSesuai: isSpecial
-                ? "1" // Auto sesuai untuk special kode
+                ? "1"
                 : cleanCurrencyFormat(data.verifikasi_akuntansi) === "0,00"
                 ? ""
                 : cleanCurrencyFormat(data.verifikasi_akuntansi || "0,00") ===
@@ -104,7 +126,7 @@ const Detail: NextPage = () => {
                   ? "1"
                   : "0",
               isVerifikasiPsoSesuai: isSpecial
-                ? "1" // Auto sesuai untuk special kode
+                ? "1"
                 : cleanCurrencyFormat(data.verifikasi_pso) === "0,00"
                 ? ""
                 : cleanCurrencyFormat(data.verifikasi_pso || "0") ===
