@@ -281,7 +281,40 @@ const Detail: NextPage = () => {
         // Khusus untuk NPP
         else if (isNPPItem) {
           console.log("Masuk kondisi NPP");
-          verifikasiValue = cleanCurrencyForPayload(data.verifikasi || "");
+          const inputVerifikasi = cleanCurrencyForPayload(
+            data.verifikasi || ""
+          );
+          const biayaPerNPP = cleanCurrencyForPayload(
+            currentData?.biaya_per_npp || ""
+          );
+          const pelaporan = cleanCurrencyForPayload(
+            currentData?.pelaporan || ""
+          );
+
+          console.log("Perbandingan NPP:", {
+            inputVerifikasi,
+            biayaPerNPP,
+            pelaporan,
+            biaya_per_npp_raw: currentData?.biaya_per_npp_raw,
+          });
+
+          // Jika input verifikasi sama dengan biaya_per_npp
+          if (inputVerifikasi === biayaPerNPP) {
+            console.log("NPP: Sama dengan biaya per NPP");
+            verifikasiValue = currentData?.biaya_per_npp_raw
+              ? String(currentData.biaya_per_npp_raw)
+              : null;
+          }
+          // Jika input verifikasi sama dengan pelaporan
+          else if (inputVerifikasi === pelaporan) {
+            console.log("NPP: Sama dengan pelaporan");
+            verifikasiValue = null;
+          }
+          // Jika berbeda dengan keduanya, kirim nilai input
+          else {
+            console.log("NPP: Input manual");
+            verifikasiValue = inputVerifikasi;
+          }
         }
         // Untuk selain LTK dan NPP
         else {
