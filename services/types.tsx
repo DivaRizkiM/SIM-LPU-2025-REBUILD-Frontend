@@ -66,7 +66,7 @@ export interface IFormVerifikasiBiayaAtribusi {
 }
 export interface IFormRutinVerifikasi {
   id_verifikasi_biaya_rutin_detail: string | number
-  verifikasi: string
+  verifikasi: string | null
   catatan_pemeriksa?: string
   isVerifikasiSesuai?: "0" | "1" | ""
 }

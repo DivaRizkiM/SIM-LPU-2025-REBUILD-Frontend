@@ -222,14 +222,29 @@ const Detail: NextPage = () => {
 
   const onSubmitVerifikasi = async () => {
     setIsSubmitting(true);
-    const tempData: IFormRutinVerifikasi[] = dataVerifications.map((data) => {
-      return {
-        id_verifikasi_biaya_rutin_detail:
-          data.id_verifikasi_biaya_rutin_detail.toString(),
-        verifikasi: data.verifikasi,
-        catatan_pemeriksa: data.catatan_pemeriksa,
-      };
-    });
+    const tempData: IFormRutinVerifikasi[] = dataVerifications.map(
+      (data, index) => {
+        const currentData = Datasource[index];
+        const isLTKItem =
+          String(currentData?.kode_rekening ?? "") === "5000000010";
+        const isNPPItem = NPP_CODES.has(
+          String(currentData?.kode_rekening ?? "")
+        );
+        const isAutoVerifItem = isLTKItem || isNPPItem;
+
+        return {
+          id_verifikasi_biaya_rutin_detail:
+            data.id_verifikasi_biaya_rutin_detail.toString(),
+          // Jika bukan auto verif dan kondisi sesuai (isVerifikasiSesuai === "1"), kirim null
+          // Jika auto verif atau tidak sesuai, kirim nilai verifikasi
+          verifikasi:
+            !isAutoVerifItem && data.isVerifikasiSesuai === "1"
+              ? null
+              : data.verifikasi,
+          catatan_pemeriksa: data.catatan_pemeriksa,
+        };
+      }
+    );
     const payload = {
       data: tempData,
     };
@@ -258,7 +273,7 @@ const Detail: NextPage = () => {
       });
   };
 
-  const checkVerifSync = (verifikasi: string, pelaporan: string) => {
+  const checkVerifSync = (verifikasi: string | null, pelaporan: string) => {
     switch (verifikasi) {
       case "0":
         return "outline";
