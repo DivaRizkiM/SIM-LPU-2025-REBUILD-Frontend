@@ -1,70 +1,72 @@
-import { LucideIcon } from "lucide-react"
-import { ModuleName } from "../../store/state"
+import { LucideIcon } from "lucide-react";
+import { ModuleName } from "../../store/state";
 
 export interface LinkI {
-    title: string
-    label?: string
-    icon: LucideIcon
-    variant: "default" | "ghost"
-    url?: string
-    module_name?: string
-    child?: {
-      title: string
-      label?: string
-      variant: "default" | "ghost"
-      url: string
-      module_name: ModuleName
-    }[]
+  title: string;
+  label?: string;
+  icon: LucideIcon;
+  variant: "default" | "ghost";
+  url?: string;
+  module_name?: string;
+  child?: {
+    title: string;
+    label?: string;
+    variant: "default" | "ghost";
+    url: string;
+    module_name: ModuleName;
+  }[];
 }
 
 export interface BiayaAtribusiDetailI {
-  id_biaya_atribusi_detail: string,
-  kode_rekening: number,
-  nama_rekening: string,
-  tahun_anggaran: string,
-  periode: string,
-  keterangan: string,
-  url_lampiran: any,
-  pelaporan: string,
-  verifikasi: string,
-  catatan_pemeriksa: string,
-  nama_kcu: string,
-  jumlah_kpc_lpu: number,
-  jumlah_kpc_lpk: number
-  rumus_alokasi_kcu: string
-  rumus_biaya_kcp: string
-  alokasi_kcu: string
-  biaya_kcp: string 
-  rute?: string
-  bobot_kiriman?: string
-  lampiran?: string
+  id_biaya_atribusi_detail: string;
+  kode_rekening: number;
+  nama_rekening: string;
+  tahun_anggaran: string;
+  periode: string;
+  keterangan: string;
+  url_lampiran: any;
+  pelaporan: string;
+  verifikasi: string;
+  catatan_pemeriksa: string;
+  nama_kcu: string;
+  jumlah_kpc_lpu: number;
+  jumlah_kpc_lpk: number;
+  rumus_alokasi_kcu: string;
+  rumus_biaya_kcp: string;
+  alokasi_kcu: string;
+  biaya_kcp: string;
+  rute?: string;
+  bobot_kiriman?: string;
+  lampiran?: string;
 }
 export interface BiayaRutinDetailI {
-  nama_kcp: string
-  kategori_biaya: string
-  catatan_pemeriksa: string
-  id_verifikasi_biaya_rutin_detail: string
-  keterangan: string
-  kode_rekening: number
-  lampiran: string
-  url_lampiran: string
-  nama_rekening: string
-  pelaporan: string
-  periode: string
-  tahun: string | number
-  verifikasi: string
-  npp: string
-  proporsi: string
-  biaya_per_npp: string
-  nama_file?: string
-  ltk?: string
-  hasil_perhitungan_fase_1?: string
-  hasil_perhitungan_fase_2?: string
-  hasil_perhitungan_fase_3?: string
-  rumus_fase_1?: string
-  rumus_fase_2?: string
-  rumus_fase_3?: string
-  biaya_per_kcp?:string
+  nama_kcp: string;
+  kategori_biaya: string;
+  catatan_pemeriksa: string;
+  id_verifikasi_biaya_rutin_detail: string;
+  keterangan: string;
+  kode_rekening: number;
+  lampiran: string;
+  url_lampiran: string;
+  nama_rekening: string;
+  pelaporan: string;
+  periode: string;
+  tahun: string | number;
+  verifikasi: string;
+  npp: string;
+  proporsi: string;
+  biaya_per_npp: string;
+  biaya_per_npp_raw?: number; // tambahkan ini
+  nama_file?: string;
+  ltk?: string;
+  hasil_perhitungan_fase_1?: string;
+  hasil_perhitungan_fase_2?: string;
+  hasil_perhitungan_fase_3?: string;
+  hasil_perhitungan_fase_3_raw?: number;
+  rumus_fase_1?: string;
+  rumus_fase_2?: string;
+  rumus_fase_3?: string;
+  biaya_per_kcp?: string;
 }
 export interface VerifikasiProduksiDetailI {
   jenis_layanan: string;

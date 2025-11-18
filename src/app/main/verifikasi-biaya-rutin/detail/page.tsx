@@ -24,6 +24,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   cleanCurrencyFormat,
+  cleanCurrencyForPayload,
   formatCurrency,
   getFileFormat,
   getQuarter,
@@ -225,26 +226,122 @@ const Detail: NextPage = () => {
     const tempData: IFormRutinVerifikasi[] = dataVerifications.map(
       (data, index) => {
         const currentData = Datasource[index];
-        const isLTKItem =
-          String(currentData?.kode_rekening ?? "") === "5000000010";
-        const isNPPItem = NPP_CODES.has(
-          String(currentData?.kode_rekening ?? "")
-        );
-        const isAutoVerifItem = isLTKItem || isNPPItem;
+        const kodeRekening = String(currentData?.kode_rekening ?? "");
+        const isLTKItem = kodeRekening === "5000000010";
+        const isNPPItem = NPP_CODES.has(kodeRekening);
+
+        console.log(`Index ${index}:`, {
+          kodeRekening,
+          isLTKItem,
+          isNPPItem,
+          verifikasi: data.verifikasi,
+        });
+
+        let verifikasiValue: string | null = data.verifikasi;
+
+        // Khusus untuk LTK
+        if (isLTKItem) {
+          console.log("Masuk kondisi LTK");
+          const inputVerifikasi = cleanCurrencyForPayload(
+            data.verifikasi || ""
+          );
+          const hasilFase3 = cleanCurrencyForPayload(
+            currentData?.hasil_perhitungan_fase_3 || ""
+          );
+          const pelaporan = cleanCurrencyForPayload(
+            currentData?.pelaporan || ""
+          );
+
+          console.log("Perbandingan LTK:", {
+            inputVerifikasi,
+            hasilFase3,
+            pelaporan,
+            hasil_perhitungan_fase_3_raw:
+              currentData?.hasil_perhitungan_fase_3_raw,
+          });
+
+          // Jika input verifikasi sama dengan hasil perhitungan fase 3
+          if (inputVerifikasi === hasilFase3) {
+            console.log("LTK: Sama dengan hasil fase 3");
+            verifikasiValue = currentData?.hasil_perhitungan_fase_3_raw
+              ? String(currentData.hasil_perhitungan_fase_3_raw)
+              : null;
+          }
+          // Jika input verifikasi sama dengan pelaporan
+          else if (inputVerifikasi === pelaporan) {
+            console.log("LTK: Sama dengan pelaporan");
+            verifikasiValue = null;
+          }
+          // Jika berbeda dengan keduanya, kirim nilai input
+          else {
+            console.log("LTK: Input manual");
+            verifikasiValue = inputVerifikasi;
+          }
+        }
+        // Khusus untuk NPP
+        else if (isNPPItem) {
+          console.log("Masuk kondisi NPP");
+          const inputVerifikasi = cleanCurrencyForPayload(
+            data.verifikasi || ""
+          );
+          const biayaPerNPP = cleanCurrencyForPayload(
+            currentData?.biaya_per_npp || ""
+          );
+          const pelaporan = cleanCurrencyForPayload(
+            currentData?.pelaporan || ""
+          );
+
+          console.log("Perbandingan NPP:", {
+            inputVerifikasi,
+            biayaPerNPP,
+            pelaporan,
+            biaya_per_npp_raw: currentData?.biaya_per_npp_raw,
+          });
+
+          // Jika input verifikasi sama dengan biaya_per_npp
+          if (inputVerifikasi === biayaPerNPP) {
+            console.log("NPP: Sama dengan biaya per NPP");
+            verifikasiValue = currentData?.biaya_per_npp_raw
+              ? String(currentData.biaya_per_npp_raw)
+              : null;
+          }
+          // Jika input verifikasi sama dengan pelaporan
+          else if (inputVerifikasi === pelaporan) {
+            console.log("NPP: Sama dengan pelaporan");
+            verifikasiValue = null;
+          }
+          // Jika berbeda dengan keduanya, kirim nilai input
+          else {
+            console.log("NPP: Input manual");
+            verifikasiValue = inputVerifikasi;
+          }
+        }
+        // Untuk selain LTK dan NPP
+        else {
+          console.log("Masuk kondisi SELAIN LTK dan NPP");
+          if (data.isVerifikasiSesuai === "1") {
+            verifikasiValue = null;
+          } else {
+            verifikasiValue = cleanCurrencyForPayload(data.verifikasi || "");
+          }
+        }
+
+        console.log(`Hasil verifikasiValue index ${index}:`, verifikasiValue);
 
         return {
           id_verifikasi_biaya_rutin_detail:
             data.id_verifikasi_biaya_rutin_detail.toString(),
-          // Jika bukan auto verif dan kondisi sesuai (isVerifikasiSesuai === "1"), kirim null
-          // Jika auto verif atau tidak sesuai, kirim nilai verifikasi
-          verifikasi:
-            !isAutoVerifItem && data.isVerifikasiSesuai === "1"
-              ? null
-              : data.verifikasi,
+          verifikasi: verifikasiValue,
           catatan_pemeriksa: data.catatan_pemeriksa,
         };
       }
     );
+
+    console.log(
+      "Payload final yang dikirim:",
+      JSON.stringify(tempData, null, 2)
+    );
+
     const payload = {
       data: tempData,
     };
