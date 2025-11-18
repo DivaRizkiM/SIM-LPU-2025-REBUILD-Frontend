@@ -60,7 +60,7 @@ export interface IFormProvinsi {
 }
 export interface IFormVerifikasiBiayaAtribusi {
   id_biaya_atribusi_detail: string | number
-  verifikasi: string
+  verifikasi: string | null
   catatan_pemeriksa: string
   isVerifikasiSesuai?: "0" | "1" | ""
 }
