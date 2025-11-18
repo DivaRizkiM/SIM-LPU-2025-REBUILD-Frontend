@@ -61,6 +61,7 @@ export interface BiayaRutinDetailI {
   hasil_perhitungan_fase_1?: string
   hasil_perhitungan_fase_2?: string
   hasil_perhitungan_fase_3?: string
+  hasil_perhitungan_fase_3_raw?: number
   rumus_fase_1?: string
   rumus_fase_2?: string
   rumus_fase_3?: string
