@@ -73,7 +73,21 @@ const Detail: NextPage = () => {
     "5102060011",
   ]);
   const isNPP = NPP_CODES.has(String(selectedData?.kode_rekening ?? ""));
-  const isAutoVerif = isLTK || isNPP; // verifikasi otomatis untuk LTK dan NPP
+
+  // Fungsi untuk menentukan jenis biaya berdasarkan kode rekening
+  const getJenisBiaya = (
+    kodeRekening: string | null
+  ): "LTK" | "NPP" | "RUTIN" => {
+    if (!kodeRekening) return "RUTIN";
+
+    if (kodeRekening === "5000000010") {
+      return "LTK";
+    } else if (NPP_CODES.has(kodeRekening)) {
+      return "NPP";
+    } else {
+      return "RUTIN";
+    }
+  };
 
   const rows = isLTK
     ? [
@@ -116,7 +130,14 @@ const Detail: NextPage = () => {
 
   const firstInit = async () => {
     setIsLoading(true);
-    const params = `?id_verifikasi_biaya_rutin=${br_id}&bulan=${bulan}&kode_rekening=${kode_rek}&id_kcu=${id_kcu}&id_kpc=${kcp_id}`;
+
+    // Tentukan jenis biaya berdasarkan kode rekening
+    const jenisBiaya = getJenisBiaya(kode_rek);
+
+    const params = `?id_verifikasi_biaya_rutin=${br_id}&bulan=${bulan}&kode_rekening=${kode_rek}&id_kcu=${id_kcu}&id_kpc=${kcp_id}&jenis_biaya=${jenisBiaya}`;
+
+    console.log("Params yang dikirim:", params);
+    console.log("Jenis Biaya:", jenisBiaya);
 
     await getDetailBiayaRutin(router, params)
       .then((res) => {
@@ -484,10 +505,9 @@ const Detail: NextPage = () => {
                   readOnly
                 />
               </div>
-
               {/* Jika bukan auto verifikasi: tampilkan pilihan kondisi + editable nominal seperti sebelumnya.
                   Jika auto verifikasi (LTK atau NPP): tampilkan nominal verifikasi readOnly (dari backend) tanpa pilihan kondisi. */}
-              {!isAutoVerif ? (
+              {!(isLTK || isNPP) ? (
                 <>
                   <div className="grid gap-2 md:grid-cols-4 items-center">
                     <div>
