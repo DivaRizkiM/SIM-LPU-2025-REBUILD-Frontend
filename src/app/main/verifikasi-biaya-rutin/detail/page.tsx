@@ -269,26 +269,27 @@ const Detail: NextPage = () => {
       const inputVerifikasi = cleanCurrencyForPayload(
         currentVerification.verifikasi || ""
       );
+      const pelaporan = cleanCurrencyForPayload(currentData?.pelaporan || "");
       const hasilFase3 = cleanCurrencyForPayload(
         currentData?.hasil_perhitungan_fase_3 || ""
       );
-      const pelaporan = cleanCurrencyForPayload(currentData?.pelaporan || "");
 
       console.log("Perbandingan LTK:", {
         inputVerifikasi,
-        hasilFase3,
         pelaporan,
+        hasilFase3,
         hasil_perhitungan_fase_3_raw: currentData?.hasil_perhitungan_fase_3_raw,
       });
 
-      if (inputVerifikasi === hasilFase3) {
+      // Cek pelaporan dulu
+      if (inputVerifikasi === pelaporan) {
+        console.log("LTK: Sama dengan pelaporan");
+        verifikasiValue = null;
+      } else if (inputVerifikasi === hasilFase3) {
         console.log("LTK: Sama dengan hasil fase 3");
         verifikasiValue = currentData?.hasil_perhitungan_fase_3_raw
           ? String(currentData.hasil_perhitungan_fase_3_raw)
           : null;
-      } else if (inputVerifikasi === pelaporan) {
-        console.log("LTK: Sama dengan pelaporan");
-        verifikasiValue = null;
       } else {
         console.log("LTK: Input manual");
         verifikasiValue = inputVerifikasi;
@@ -300,26 +301,27 @@ const Detail: NextPage = () => {
       const inputVerifikasi = cleanCurrencyForPayload(
         currentVerification.verifikasi || ""
       );
+      const pelaporan = cleanCurrencyForPayload(currentData?.pelaporan || "");
       const biayaPerNPP = cleanCurrencyForPayload(
         currentData?.biaya_per_npp || ""
       );
-      const pelaporan = cleanCurrencyForPayload(currentData?.pelaporan || "");
 
       console.log("Perbandingan NPP:", {
         inputVerifikasi,
-        biayaPerNPP,
         pelaporan,
+        biayaPerNPP,
         biaya_per_npp_raw: currentData?.biaya_per_npp_raw,
       });
 
-      if (inputVerifikasi === biayaPerNPP) {
+      // Cek pelaporan dulu
+      if (inputVerifikasi === pelaporan) {
+        console.log("NPP: Sama dengan pelaporan");
+        verifikasiValue = null;
+      } else if (inputVerifikasi === biayaPerNPP) {
         console.log("NPP: Sama dengan biaya per NPP");
         verifikasiValue = currentData?.biaya_per_npp_raw
           ? String(currentData.biaya_per_npp_raw)
           : null;
-      } else if (inputVerifikasi === pelaporan) {
-        console.log("NPP: Sama dengan pelaporan");
-        verifikasiValue = null;
       } else {
         console.log("NPP: Input manual");
         verifikasiValue = inputVerifikasi;
