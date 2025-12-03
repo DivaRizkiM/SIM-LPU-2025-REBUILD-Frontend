@@ -1695,3 +1695,13 @@ export const deleteProduksiPendapatan = (
     `/dpp-hapus/${payload}`,
   );
 };
+export const downloadQRKpc = async (
+  router: AppRouterInstance, 
+  id: string | number) => {
+  return UseGuardInstance(router).get<Blob>(
+    `/kpc/qr/${id}/download`,
+    {
+      responseType: 'blob'
+    }
+  );
+};
