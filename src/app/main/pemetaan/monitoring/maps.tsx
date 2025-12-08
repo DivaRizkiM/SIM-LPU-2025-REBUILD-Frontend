@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useMemo, useEffect, useState } from "react";
+import { FC, useMemo, useEffect, useState, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -9,6 +9,8 @@ import {
   GeoJSON,
   Circle,
   LayerGroup,
+  Polyline,
+  Tooltip,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
@@ -229,13 +231,16 @@ interface MapsI {
   dataSource: Array<KPCKoordinat>;
   isLoading: boolean;
   currentType?: string; // lpu | lpk | mitra | penyelenggara
+  distanceLineData?: any;
+  onClearDistance?: () => void;
 }
 
 // ====================== Komponen utama
-const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
+const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType, distanceLineData, onClearDistance }) => {
   const router = useRouter();
   const api = UseGuardInstance(router);
   const ctx = context();
+  const mapRef = useRef<any>(null);
 
   // UI state
   const [base, setBase] = useState<"osm" | "imagery" | "topo">("osm");
@@ -276,6 +281,27 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
       }
     })();
   }, []);
+
+  // Auto-zoom ke garis jarak
+  useEffect(() => {
+    if (distanceLineData?.origin && distanceLineData?.destination && mapRef.current) {
+      const map = mapRef.current;
+      
+      const originPos: L.LatLngExpression = [
+        distanceLineData.origin.latitude, 
+        distanceLineData.origin.longitude
+      ];
+      const destPos: L.LatLngExpression = [
+        distanceLineData.destination.latitude, 
+        distanceLineData.destination.longitude
+      ];
+      
+      const bounds = L.latLngBounds([originPos, destPos]);
+      setTimeout(() => {
+        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
+      }, 100);
+    }
+  }, [distanceLineData]);
 
   // Normalisasi titik
   const points = useMemo(() => {
@@ -404,11 +430,6 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
             />
             <span>Batas Regional POS</span>
           </label>
-          {!regionalGeo && (
-            <div className="pl-6 text-xs text-red-600">
-              {regionalError ?? "Data tidak tersedia"}
-            </div>
-          )}
 
           <label className="flex items-center gap-2 text-sm py-1">
             <input
@@ -419,11 +440,6 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
             />
             <span>Batas Administrasi</span>
           </label>
-          {!adminGeo && (
-            <div className="pl-6 text-xs text-red-600">
-              {adminError ?? "Data tidak tersedia"}
-            </div>
-          )}
 
           <label className="flex items-center gap-2 text-sm py-1">
             <input
@@ -433,6 +449,22 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
             />
             <span>Cakupan Layanan (radius 10 km)</span>
           </label>
+
+          {distanceLineData && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 text-xs text-slate-600 bg-red-50 px-2 py-1 rounded">
+                📍 Garis jarak ditampilkan
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onClearDistance}
+                className="h-7 px-2 text-xs"
+              >
+                Hapus
+              </Button>
+            </div>
+          )}
 
           <div className="mt-2 flex items-center gap-3 bg-white/95 rounded-xl px-3 py-2 shadow">
             <img src="/poslogo.png" alt="pos" className="w-7 h-7" />
@@ -448,6 +480,7 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
 
       {/* Map */}
       <MapContainer
+        ref={mapRef}
         center={indonesiaCenter}
         zoom={5}
         style={{ height: "100vh", width: "100%" }}
@@ -511,6 +544,33 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType }) => {
               />
             ))}
           </LayerGroup>
+        )}
+
+        {/* Garis jarak antara dua kantor */}
+        {distanceLineData?.origin && distanceLineData?.destination && (
+          <Polyline
+            positions={[
+              [distanceLineData.origin.latitude, distanceLineData.origin.longitude],
+              [distanceLineData.destination.latitude, distanceLineData.destination.longitude],
+            ]}
+            pathOptions={{
+              color: "#dc2626",
+              weight: 5,
+              opacity: 1,
+              lineCap: "round",
+              lineJoin: "round",
+              dashArray: "8, 6",
+            }}
+          >
+            <Tooltip
+              permanent
+              direction="top"
+              offset={[0, -10]}
+              className="bg-red-600 text-white px-2 py-1 rounded text-sm font-semibold border-0"
+            >
+              {distanceLineData.distance_km?.toFixed(2)} km
+            </Tooltip>
+          </Polyline>
         )}
       </MapContainer>
     </div>
