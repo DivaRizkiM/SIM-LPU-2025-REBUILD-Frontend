@@ -36,9 +36,11 @@ import { RegionalI } from "../../referensi/regional/columns";
 import { kcuI } from "../../referensi/kc-kcu/columns";
 import { ProfilKcpI } from "../../profilKCP/columns";
 import { QueryParams, buildQueryParam } from "../../../../../helper";
-import { ChevronsUp } from "lucide-react";
+import { ChevronsUp, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { context } from "../../../../../store";
+import DistanceSearchModal from "./DistanceSearchModal";
 
 const list_tipe_penyelenggara = [
   { value: "lpu", label: "LPU/LPK (KCP)" },
@@ -71,6 +73,7 @@ const Monitoring: NextPage = () => {
   });
 
   const router = useRouter();
+  const ctx = context();
   const [dataSource, setDataSource] = useState<Array<KPCKoordinat>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isKotaLoading, setIsKotaLoading] = useState<boolean>(false);
@@ -98,6 +101,7 @@ const Monitoring: NextPage = () => {
   const [selectedTipePenyelenggara, setSelectedTipePenyelenggara] =
     useState<TipePenyelenggara>("lpu");
   const [isFilterHidden, setIsFilterHidden] = useState<boolean>(false);
+  const [distanceLineData, setDistanceLineData] = useState<any>(null);
 
   const filterOptionsMap: Record<TipePenyelenggara, string[]> = {
     lpu: ["provinsi", "kabupaten/kota", "kecamatan", "regional", "kprk", "kpc"],
@@ -508,7 +512,38 @@ const Monitoring: NextPage = () => {
               />
             )}
 
-            <div className="col-span-2 flex justify-end">
+            <div className="col-span-2 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  ctx.dispatch({
+                    isModal: {
+                      type: "modal",
+                      component: (
+                        <DistanceSearchModal
+                          onClose={() => {
+                            ctx.dispatch({
+                              isModal: undefined,
+                            });
+                          }}
+                          onDistanceFound={(result) => {
+                            setDistanceLineData({
+                              origin: result.origin,
+                              destination: result.destination,
+                              distance_km: result.distance_km,
+                            });
+                          }}
+                        />
+                      ),
+                    },
+                  });
+                }}
+                className="gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                Cari Jarak
+              </Button>
               <Button type="submit">Terapkan</Button>
             </div>
           </form>
@@ -520,6 +555,8 @@ const Monitoring: NextPage = () => {
           dataSource={dataSource}
           isLoading={isLoading}
           currentType={selectedTipePenyelenggara}
+          distanceLineData={distanceLineData}
+          onClearDistance={() => setDistanceLineData(null)}
         />
       </div>
     </div>

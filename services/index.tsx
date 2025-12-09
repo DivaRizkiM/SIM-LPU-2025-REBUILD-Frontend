@@ -1705,3 +1705,28 @@ export const downloadQRKpc = async (
     }
   );
 };
+
+// Distance between two offices
+export const getKantorDistance = (
+  router: AppRouterInstance,
+  originId?: string,
+  originName?: string,
+  originJenisKantor?: string,
+  destinationId?: string,
+  destinationName?: string,
+  destinationJenisKantor?: string,
+) => {
+  const params = new URLSearchParams();
+  if (originId) params.append('origin_id', originId);
+  if (originName) params.append('origin_name', originName);
+  if (originJenisKantor) params.append('origin_jenis_kantor', originJenisKantor);
+  if (destinationId) params.append('destination_id', destinationId);
+  if (destinationName) params.append('destination_name', destinationName);
+  if (destinationJenisKantor) params.append('destination_jenis_kantor', destinationJenisKantor);
+
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+
+  return UseGuardInstance(router).get<ResponseAPI>(
+    `/monitoring/kantor-distance${queryString}`
+  );
+};
