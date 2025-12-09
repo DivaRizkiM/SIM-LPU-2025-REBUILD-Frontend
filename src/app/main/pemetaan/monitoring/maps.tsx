@@ -11,16 +11,164 @@ import {
   LayerGroup,
   Polyline,
   Tooltip,
+  useMap,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import L from "leaflet";
+import "leaflet-routing-machine";
 import { Button } from "@/components/ui/button";
 import { context } from "../../../../../store";
 import PopupDetail from "./PopupDetail";
 import { KPCKoordinat } from "../../../../../services/types";
 import UseGuardInstance from "../../../../../services/instance";
 import { useRouter } from "next/navigation";
+
+// ====================== Routing Component with Dijkstra
+const RoutingMachine: FC<{ 
+  origin: { latitude: number; longitude: number }; 
+  destination: { latitude: number; longitude: number };
+  onRouteFound?: (distance: number) => void;
+}> = ({ origin, destination, onRouteFound }) => {
+  const map = useMap();
+  const routingControlRef = useRef<any>(null);
+  const [routeDistance, setRouteDistance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Remove previous routing control if exists
+    if (routingControlRef.current) {
+      try {
+        // Remove distance marker first
+        if ((routingControlRef.current as any)._distanceMarker) {
+          map.removeLayer((routingControlRef.current as any)._distanceMarker);
+          (routingControlRef.current as any)._distanceMarker = null;
+        }
+        // Remove the control from map
+        map.removeControl(routingControlRef.current);
+      } catch (e) {
+        console.log("Error removing control:", e);
+      }
+      routingControlRef.current = null;
+    }
+
+    // Create routing control with OSRM (uses Dijkstra internally)
+    const routingControl = (L as any).Routing.control({
+      waypoints: [
+        L.latLng(origin.latitude, origin.longitude),
+        L.latLng(destination.latitude, destination.longitude),
+      ],
+      router: (L as any).Routing.osrmv1({
+        serviceUrl: 'https://router.project-osrm.org/route/v1',
+        profile: 'driving', // driving, walking, cycling
+      }),
+      routeWhileDragging: false,
+      addWaypoints: false,
+      draggableWaypoints: false,
+      lineOptions: {
+        styles: [
+          { color: '#dc2626', opacity: 0.9, weight: 6 }
+        ],
+        extendToWaypoints: true,
+        missingRouteTolerance: 0
+      },
+      show: false, // Hide default instructions panel
+      createMarker: () => null, // Don't create default markers
+      fitSelectedRoutes: false, // Disable auto-fit, we'll do it manually
+      autoRoute: true,
+    });
+
+    // Add to map
+    routingControl.addTo(map);
+    routingControlRef.current = routingControl;
+
+    // Listen for route found event
+    routingControl.on('routesfound', (e: any) => {
+      const routes = e.routes;
+      const summary = routes[0].summary;
+      const distanceKm = (summary.totalDistance / 1000);
+      
+      setRouteDistance(distanceKm);
+      
+      if (onRouteFound) {
+        onRouteFound(distanceKm);
+      }
+
+      // Get the bounds of the route and fit to it
+      const coordinates = routes[0].coordinates;
+      const bounds = L.latLngBounds(
+        coordinates.map((coord: any) => [coord.lat, coord.lng])
+      );
+      
+      // Fit map to route bounds with padding - use setTimeout to ensure map is ready
+      setTimeout(() => {
+        map.fitBounds(bounds, { 
+          padding: [50, 50],
+          maxZoom: 14,
+          animate: false, // Disable animation for accurate positioning
+        });
+        // Force invalidate size to recalculate map dimensions
+        map.invalidateSize();
+      }, 100);
+
+      // Add distance label in the middle of the route
+      const midIndex = Math.floor(coordinates.length / 2);
+      const midPoint = coordinates[midIndex];
+
+      const marker = L.marker([midPoint.lat, midPoint.lng], {
+        icon: L.divIcon({
+          className: 'route-distance-label',
+          html: `<div style="background-color: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${distanceKm.toFixed(2)} km</div>`,
+          iconSize: [80, 30],
+          iconAnchor: [40, 15],
+        }),
+      }).addTo(map);
+
+      // Store marker reference for cleanup
+      (routingControl as any)._distanceMarker = marker;
+    });
+
+    // Cleanup function
+    return () => {
+      if (routingControlRef.current) {
+        try {
+          // Remove distance marker first if exists
+          if ((routingControlRef.current as any)._distanceMarker) {
+            map.removeLayer((routingControlRef.current as any)._distanceMarker);
+            (routingControlRef.current as any)._distanceMarker = null;
+          }
+        } catch (e) {
+          console.log("Error removing marker:", e);
+        }
+
+        try {
+          // Remove the routing control
+          const control = routingControlRef.current;
+          // Clear internal state before removing
+          if (control._line) {
+            map.removeLayer(control._line);
+          }
+          if (control._alternatives) {
+            control._alternatives.forEach((alt: any) => {
+              if (alt.route && alt.route._line) {
+                map.removeLayer(alt.route._line);
+              }
+            });
+          }
+          map.removeControl(control);
+        } catch (e) {
+          console.log("Error removing control:", e);
+        }
+        
+        routingControlRef.current = null;
+      }
+    };
+  }, [map, origin, destination, onRouteFound]);
+
+  return null;
+};
 
 // ====================== Konstanta
 const IND_BOUNDS = { minLat: -11.0, maxLat: 6.0, minLng: 95.0, maxLng: 141.0 };
@@ -62,7 +210,7 @@ const normalizePoint = (rawLat: unknown, rawLng: unknown) => {
 const makePointerHTML = (variant: "default" | "mitra" = "default") => {
   const color = variant === "mitra" ? "#2563eb" : "#ff7a00";
   return `
-    <div style="position:relative;width:30px;height:42px;transform:translate(-15px,-42px);">
+    <div style="position:relative;width:30px;height:42px;">
       <div style="width:26px;height:26px;border-radius:50%;background:${color};
         box-shadow:0 0 0 2px #fff;display:flex;align-items:center;justify-content:center;margin:0 auto;">
         <img src="/poslogo.png" alt="pos" style="width:16px;height:16px;" />
@@ -78,7 +226,7 @@ const makePosIcon = (variant: "default" | "mitra" = "default") =>
     html: makePointerHTML(variant),
     iconSize: [30, 42],
     iconAnchor: [15, 42],
-    popupAnchor: [0, -36],
+    popupAnchor: [0, -42],
   });
 
 // ====================== Haversine
@@ -546,31 +694,21 @@ const Maps: FC<MapsI> = ({ dataSource, isLoading, currentType, distanceLineData,
           </LayerGroup>
         )}
 
-        {/* Garis jarak antara dua kantor */}
+        {/* Routing dengan Dijkstra algorithm (OSRM) */}
         {distanceLineData?.origin && distanceLineData?.destination && (
-          <Polyline
-            positions={[
-              [distanceLineData.origin.latitude, distanceLineData.origin.longitude],
-              [distanceLineData.destination.latitude, distanceLineData.destination.longitude],
-            ]}
-            pathOptions={{
-              color: "#dc2626",
-              weight: 5,
-              opacity: 1,
-              lineCap: "round",
-              lineJoin: "round",
-              dashArray: "8, 6",
+          <RoutingMachine
+            origin={{
+              latitude: distanceLineData.origin.latitude,
+              longitude: distanceLineData.origin.longitude,
             }}
-          >
-            <Tooltip
-              permanent
-              direction="top"
-              offset={[0, -10]}
-              className="bg-red-600 text-white px-2 py-1 rounded text-sm font-semibold border-0"
-            >
-              {distanceLineData.distance_km?.toFixed(2)} km
-            </Tooltip>
-          </Polyline>
+            destination={{
+              latitude: distanceLineData.destination.latitude,
+              longitude: distanceLineData.destination.longitude,
+            }}
+            onRouteFound={(distance) => {
+              console.log("Route distance via Dijkstra:", distance, "km");
+            }}
+          />
         )}
       </MapContainer>
     </div>
