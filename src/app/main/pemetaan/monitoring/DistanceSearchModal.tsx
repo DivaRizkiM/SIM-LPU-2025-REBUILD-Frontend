@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState } from "react";
+import { FC, useState, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,14 +8,26 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { getKantorDistance } from "../../../../../services";
-import { AlertCircle, CheckCircle2, MapPin, Loader } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getKantorDistance, getKantorAutocomplete } from "../../../../../services";
+import { AlertCircle, CheckCircle2, MapPin, Loader, ChevronsUpDown, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const FormSchema = z.object({
+  origin_id: z.string().optional(),
   origin_name: z.string().optional(),
+  destination_id: z.string().optional(),
   destination_name: z.string().optional(),
 });
+
+interface KantorOption {
+  id: string | number;
+  nomor_dirian: string;
+  nama: string;
+  jenis_kantor: string;
+  alamat: string;
+}
 
 interface DistanceResult {
   origin: {
@@ -57,14 +69,76 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
   const [result, setResult] = useState<DistanceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  // Autocomplete states
+  const [originOpen, setOriginOpen] = useState(false);
+  const [destinationOpen, setDestinationOpen] = useState(false);
+  const [originOptions, setOriginOptions] = useState<KantorOption[]>([]);
+  const [destinationOptions, setDestinationOptions] = useState<KantorOption[]>([]);
+  const [originSearch, setOriginSearch] = useState("");
+  const [destinationSearch, setDestinationSearch] = useState("");
+  const [originLoading, setOriginLoading] = useState(false);
+  const [destinationLoading, setDestinationLoading] = useState(false);
+  const [selectedOrigin, setSelectedOrigin] = useState<KantorOption | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<KantorOption | null>(null);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
+      origin_id: "",
       origin_name: "",
+      destination_id: "",
       destination_name: "",
     },
   });
+  
+  // Debounce autocomplete search for origin
+  useEffect(() => {
+    if (!originSearch || originSearch.length < 2) {
+      setOriginOptions([]);
+      return;
+    }
+    
+    const timer = setTimeout(async () => {
+      setOriginLoading(true);
+      try {
+        const res = await getKantorAutocomplete(router, originSearch, undefined, undefined, undefined, 10);
+        if (res?.data?.data) {
+          setOriginOptions(res.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching origin autocomplete:', err);
+      } finally {
+        setOriginLoading(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [originSearch, router]);
+  
+  // Debounce autocomplete search for destination
+  useEffect(() => {
+    if (!destinationSearch || destinationSearch.length < 2) {
+      setDestinationOptions([]);
+      return;
+    }
+    
+    const timer = setTimeout(async () => {
+      setDestinationLoading(true);
+      try {
+        const res = await getKantorAutocomplete(router, destinationSearch, undefined, undefined, undefined, 10);
+        if (res?.data?.data) {
+          setDestinationOptions(res.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching destination autocomplete:', err);
+      } finally {
+        setDestinationLoading(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [destinationSearch, router]);
 
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     setLoading(true);
@@ -73,25 +147,20 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
     setHasSearched(true);
 
     try {
-      // Validasi minimal harus ada salah satu input
-      const originFilled =
-        (data.origin_name && data.origin_name.trim());
-      const destinationFilled =
-        (data.destination_name && data.destination_name.trim());
-
-      if (!originFilled || !destinationFilled) {
-        setError("Harap isi nama kantor asal dan kantor tujuan");
+      // Validasi harus pilih kedua kantor
+      if (!selectedOrigin || !selectedDestination) {
+        setError("Harap pilih kantor asal dan kantor tujuan dari daftar autocomplete");
         setLoading(false);
         return;
       }
 
       const res = await getKantorDistance(
         router,
+        selectedOrigin.id.toString(),
         undefined,
-        data.origin_name?.trim(),
         undefined,
+        selectedDestination.id.toString(),
         undefined,
-        data.destination_name?.trim(),
         undefined
       );
 
@@ -124,6 +193,12 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
     setResult(null);
     setError(null);
     setHasSearched(false);
+    setSelectedOrigin(null);
+    setSelectedDestination(null);
+    setOriginSearch("");
+    setDestinationSearch("");
+    setOriginOptions([]);
+    setDestinationOptions([]);
   };
 
   return (
@@ -159,16 +234,81 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
                   control={form.control}
                   name="origin_name"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel className="text-slate-700 dark:text-slate-300">Nama Kantor</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Cth: Kantor Pusat Jakarta"
-                          {...field}
-                          disabled={loading}
-                          className="bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                        />
-                      </FormControl>
+                      <Popover open={originOpen} onOpenChange={setOriginOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={originOpen}
+                              disabled={loading}
+                              className={cn(
+                                "w-full justify-between bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600",
+                                !selectedOrigin && "text-slate-400 dark:text-slate-500"
+                              )}
+                            >
+                              {selectedOrigin ? (
+                                <span className="truncate">{selectedOrigin.nama} - {selectedOrigin.jenis_kantor}</span>
+                              ) : (
+                                "Ketik untuk mencari kantor..."
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="Cari kantor asal..."
+                              value={originSearch}
+                              onValueChange={setOriginSearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {originLoading ? (
+                                  <div className="flex items-center justify-center py-6">
+                                    <Loader className="h-4 w-4 animate-spin" />
+                                    <span className="ml-2">Mencari...</span>
+                                  </div>
+                                ) : originSearch.length < 2 ? (
+                                  "Ketik minimal 2 karakter untuk mencari"
+                                ) : (
+                                  "Tidak ada data ditemukan"
+                                )}
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {originOptions.map((kantor) => (
+                                  <CommandItem
+                                    key={kantor.id}
+                                    value={kantor.id.toString()}
+                                    onSelect={() => {
+                                      setSelectedOrigin(kantor);
+                                      form.setValue("origin_id", kantor.id.toString());
+                                      form.setValue("origin_name", kantor.nama);
+                                      setOriginOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedOrigin?.id === kantor.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{kantor.nama}</span>
+                                      <span className="text-xs text-slate-500">
+                                        {kantor.jenis_kantor} • {kantor.alamat}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </FormItem>
                   )}
                 />
@@ -183,16 +323,81 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
                   control={form.control}
                   name="destination_name"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel className="text-slate-700 dark:text-slate-300">Nama Kantor</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Cth: KCP Surabaya"
-                          {...field}
-                          disabled={loading}
-                          className="bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                        />
-                      </FormControl>
+                      <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={destinationOpen}
+                              disabled={loading}
+                              className={cn(
+                                "w-full justify-between bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600",
+                                !selectedDestination && "text-slate-400 dark:text-slate-500"
+                              )}
+                            >
+                              {selectedDestination ? (
+                                <span className="truncate">{selectedDestination.nama} - {selectedDestination.jenis_kantor}</span>
+                              ) : (
+                                "Ketik untuk mencari kantor..."
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="Cari kantor tujuan..."
+                              value={destinationSearch}
+                              onValueChange={setDestinationSearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {destinationLoading ? (
+                                  <div className="flex items-center justify-center py-6">
+                                    <Loader className="h-4 w-4 animate-spin" />
+                                    <span className="ml-2">Mencari...</span>
+                                  </div>
+                                ) : destinationSearch.length < 2 ? (
+                                  "Ketik minimal 2 karakter untuk mencari"
+                                ) : (
+                                  "Tidak ada data ditemukan"
+                                )}
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {destinationOptions.map((kantor) => (
+                                  <CommandItem
+                                    key={kantor.id}
+                                    value={kantor.id.toString()}
+                                    onSelect={() => {
+                                      setSelectedDestination(kantor);
+                                      form.setValue("destination_id", kantor.id.toString());
+                                      form.setValue("destination_name", kantor.nama);
+                                      setDestinationOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedDestination?.id === kantor.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{kantor.nama}</span>
+                                      <span className="text-xs text-slate-500">
+                                        {kantor.jenis_kantor} • {kantor.alamat}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </FormItem>
                   )}
                 />
@@ -201,7 +406,7 @@ const DistanceSearchModal: FC<DistanceSearchModalI> = ({ onClose, onDistanceFoun
 
             {/* Info text */}
             <div className="text-sm text-slate-500 dark:text-slate-400 p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-              💡 <strong>Tips:</strong> Masukkan nama kantor untuk pencarian. Cari berdasarkan nama kantor, kota, atau regional.
+              💡 <strong>Tips:</strong> Ketik minimal 2 karakter untuk memunculkan daftar kantor. Cari berdasarkan nama kantor, nomor dirian, atau alamat.
             </div>
 
             {/* Buttons */}

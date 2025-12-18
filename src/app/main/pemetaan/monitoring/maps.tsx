@@ -37,16 +37,12 @@ const RoutingMachine: FC<{
 
   useEffect(() => {
     if (!map) return;
-
-    // Remove previous routing control if exists
     if (routingControlRef.current) {
       try {
-        // Remove distance marker first
         if ((routingControlRef.current as any)._distanceMarker) {
           map.removeLayer((routingControlRef.current as any)._distanceMarker);
           (routingControlRef.current as any)._distanceMarker = null;
         }
-        // Remove the control from map
         map.removeControl(routingControlRef.current);
       } catch (e) {
         console.log("Error removing control:", e);
@@ -54,7 +50,6 @@ const RoutingMachine: FC<{
       routingControlRef.current = null;
     }
 
-    // Create routing control with OSRM (uses Dijkstra internally)
     const routingControl = (L as any).Routing.control({
       waypoints: [
         L.latLng(origin.latitude, origin.longitude),
@@ -62,7 +57,7 @@ const RoutingMachine: FC<{
       ],
       router: (L as any).Routing.osrmv1({
         serviceUrl: 'https://router.project-osrm.org/route/v1',
-        profile: 'driving', // driving, walking, cycling
+        profile: 'driving', 
       }),
       routeWhileDragging: false,
       addWaypoints: false,
@@ -74,9 +69,9 @@ const RoutingMachine: FC<{
         extendToWaypoints: true,
         missingRouteTolerance: 0
       },
-      show: false, // Hide default instructions panel
-      createMarker: () => null, // Don't create default markers
-      fitSelectedRoutes: false, // Disable auto-fit, we'll do it manually
+      show: false,
+      createMarker: () => null,
+      fitSelectedRoutes: false,
       autoRoute: true,
     });
 
