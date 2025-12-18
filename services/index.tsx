@@ -1730,3 +1730,25 @@ export const getKantorDistance = (
     `/monitoring/kantor-distance${queryString}`
   );
 };
+
+export const getKantorAutocomplete = (
+  router: AppRouterInstance,
+  query?: string,
+  jenisKantor?: string,
+  idRegional?: string,
+  idKprk?: string,
+  limit?: number
+) => {
+  const params = new URLSearchParams();
+  if (query) params.append('q', query);
+  if (jenisKantor) params.append('jenis_kantor', jenisKantor);
+  if (idRegional) params.append('id_regional', idRegional);
+  if (idKprk) params.append('id_kprk', idKprk);
+  if (limit) params.append('limit', limit.toString());
+
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+
+  return UseGuardInstance(router).get<ResponseAPI>(
+    `/monitoring/kantor-autocomplete${queryString}`
+  );
+};
