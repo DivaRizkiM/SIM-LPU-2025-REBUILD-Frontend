@@ -398,9 +398,17 @@ const Monitoring: NextPage = () => {
                     onSelect={(e) => {
                       form.setValue("id_provinsi", e);
                       getKotaByProvince(e);
+                      // Clear regional when provinsi is selected
+                      if (e && e !== "") {
+                        form.setValue("id_regional", "");
+                        form.setValue("id_kprk", "");
+                        form.setValue("id_kpc", "");
+                        setkcuOptions([]);
+                        setKcpOptions([]);
+                      }
                     }}
                     isLoading={isLoading}
-                    disabled={provinsiOptions.length === 0}
+                    disabled={provinsiOptions.length === 0 || (form.watch("id_regional") && form.watch("id_regional") !== "")}
                   />
                 </FormItem>
               )}
@@ -463,8 +471,16 @@ const Monitoring: NextPage = () => {
                       onSelect={(e) => {
                         form.setValue("id_regional", e);
                         getKcuByRegional(e);
+                        // Clear provinsi when regional is selected
+                        if (e && e !== "") {
+                          form.setValue("id_provinsi", "");
+                          form.setValue("id_kabupaten_kota", "");
+                          form.setValue("id_kecamatan", "");
+                          setKabKotaOptions([]);
+                          setKecamatanOptions([]);
+                        }
                       }}
-                      disabled={regionalOptions.length === 0}
+                      disabled={regionalOptions.length === 0 || (form.watch("id_provinsi") && form.watch("id_provinsi") !== "")}
                     />
                   </FormItem>
                 )}
