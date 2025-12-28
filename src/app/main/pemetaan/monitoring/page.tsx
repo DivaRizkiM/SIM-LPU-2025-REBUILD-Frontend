@@ -480,7 +480,7 @@ const Monitoring: NextPage = () => {
                           setKecamatanOptions([]);
                         }
                       }}
-                      disabled={regionalOptions.length === 0 || (form.watch("id_provinsi") && form.watch("id_provinsi") !== "")}
+                      disabled={regionalOptions.length === 0 || !!(form.watch("id_provinsi") && form.watch("id_provinsi") !== "")}
                     />
                   </FormItem>
                 )}
