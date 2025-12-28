@@ -408,7 +408,7 @@ const Monitoring: NextPage = () => {
                       }
                     }}
                     isLoading={isLoading}
-                    disabled={provinsiOptions.length === 0 || (form.watch("id_regional") && form.watch("id_regional") !== "")}
+                    disabled={provinsiOptions.length === 0 || !!(form.watch("id_regional") && form.watch("id_regional") !== "")}
                   />
                 </FormItem>
               )}
