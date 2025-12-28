@@ -24,10 +24,12 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { getDetailKPRK, getKPRK } from "../../../../../services"
+import UseGuardInstance from "../../../../../services/instance"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { ArrowLeftCircle } from "lucide-react"
+import { ArrowLeftCircle, Send } from "lucide-react"
 import { ReloadIcon } from "@radix-ui/react-icons"
+import { toast } from "@/components/ui/use-toast"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -117,6 +119,8 @@ export function DataTable<TData, TValue>({
   const router = useRouter()
   const [nama_kcu,setNama_kcu] = useState<string>('')
   const [id_regional,setId_regional] = useState<number>()
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  
   const getKcu = async()=> {
     if (!kcu_id) return
     await getDetailKPRK(router,parseInt(kcu_id))
@@ -132,6 +136,44 @@ export function DataTable<TData, TValue>({
     getKcu()
     /* eslint-disable react-hooks/exhaustive-deps */
   },[])
+
+  const handleSubmit = async () => {
+    if (!ba_id) {
+      toast({
+        title: "Error",
+        description: "ID Biaya Atribusi tidak ditemukan",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    
+    try {
+      const response = await UseGuardInstance(router).post('/atribusi-verifikasi/all', {
+        data: ba_id
+      })
+
+      if (response.data.status === 'SUCCESS') {
+        toast({
+          title: "Berhasil",
+          description: "Verifikasi biaya atribusi berhasil disubmit",
+        })
+        
+        // Refresh data or redirect if needed
+        router.refresh()
+      }
+    } catch (error: any) {
+      console.error('Submit error:', error)
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Gagal submit verifikasi",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
 
   return (
@@ -149,6 +191,23 @@ export function DataTable<TData, TValue>({
           <Input value={nama_kcu} readOnly className="w-full md:w-min bg-secondary"/>
           <Input value={`${tahun}`} readOnly className="w-full md:w-min bg-secondary"/>
           <Input value={`triwulan ${triwulan}`} readOnly className="w-full md:w-min bg-secondary"/>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full md:w-auto"
+          >
+            {isSubmitting ? (
+              <>
+                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Submit
+              </>
+            )}
+          </Button>
       </div>
       <Table>
         <TableHeader>
