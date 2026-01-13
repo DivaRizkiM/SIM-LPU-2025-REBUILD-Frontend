@@ -27,30 +27,32 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     event.preventDefault()
     setIsLoading(true)
 
+    // RECAPTCHA DISABLED - IP Google diblok di server
     // Generate ReCaptcha token
-    const token = await executeRecaptcha("login");
+    // const token = await executeRecaptcha("login");
     
     // Attach generated token to your API requests and validate it on the server
-    const responseRecaptcha = await fetch("/api/verify-recaptcha", {
-      method: "POST",
-      body: JSON.stringify({token}),
-    });
-    try {
-      const dataRecaptcha = await responseRecaptcha.json()
-      if (!dataRecaptcha.success) {
-        setIsLoading(false)
-        return toast({
-          title: 'reCAPTCHA verification failed',
-          variant: 'destructive'
-        })
-      }
-    } catch (error) {
-      setIsLoading(false)
-      return toast({
-        title: 'Something wrong with reCAPTCHA verification',
-        variant: 'destructive'
-      })
-    }
+    // const responseRecaptcha = await fetch("/api/verify-recaptcha", {
+    //   method: "POST",
+    //   body: JSON.stringify({token}),
+    // });
+    // try {
+    //   const dataRecaptcha = await responseRecaptcha.json()
+    //   if (!dataRecaptcha.success) {
+    //     setIsLoading(false)
+    //     return toast({
+    //       title: 'reCAPTCHA verification failed',
+    //       variant: 'destructive'
+    //     })
+    //   }
+    // } catch (error) {
+    //   setIsLoading(false)
+    //   return toast({
+    //     title: 'Something wrong with reCAPTCHA verification',
+    //     variant: 'destructive'
+    //   })
+    // }
+    
     const payload:IFormLogin = {
       username: username,
       password_hash: password
