@@ -1,8 +1,9 @@
 import { Metadata } from "next"
 import Image from "next/image"
 import { UserAuthForm } from "../Login/user-auth-form"
-import { ReCaptchaProvider } from "next-recaptcha-v3";
-import { env } from "process"
+// RECAPTCHA DISABLED - IP Google diblok di server
+// import { ReCaptchaProvider } from "next-recaptcha-v3";
+// import { env } from "process"
 
 
 export const metadata: Metadata = {
@@ -14,8 +15,8 @@ export default function AuthenticationPage() {
   
 
   return (
-    <ReCaptchaProvider reCaptchaKey={env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}>
-      <div className="h-dvh overflow-hidden">
+    // <ReCaptchaProvider reCaptchaKey={env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}>
+    <div className="h-dvh overflow-hidden">
         <div className="md:hidden flex justify-center">
           <Image
             src="/icons/Kominfo.svg"
@@ -70,7 +71,8 @@ export default function AuthenticationPage() {
                 </p>
               </div>
               <UserAuthForm />
-              <p className="px-8 text-center text-sm text-muted-foreground">
+              {/* RECAPTCHA TEXT DISABLED */}
+              {/* <p className="px-8 text-center text-sm text-muted-foreground">
               This site is protected by reCAPTCHA and the Google{" "}
                 <a
                   href="https://policies.google.com/privacy"
@@ -88,11 +90,11 @@ export default function AuthenticationPage() {
                   Terms of Service
                 </a>
                 .
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
       </div>
-    </ReCaptchaProvider>
+    // </ReCaptchaProvider>
   )
 }
