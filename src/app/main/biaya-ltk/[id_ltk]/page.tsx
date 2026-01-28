@@ -1,7 +1,7 @@
 "use client";
 import { NextPage } from "next";
 import { getDetailLtk, postVerifikasiLtk } from "../../../../../services";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,7 @@ const SPECIAL_KODE_REKENING = ["5102070003", "5000000015", "5000000014"];
 
 const Detail: NextPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ id_ltk: string }>();
   const [Datasource, setDataSource] = useState<Array<LtkI>>([]);
   const [selectedID, setSelectedID] = useState<string>("");
@@ -43,6 +44,10 @@ const Detail: NextPage = () => {
   >([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+
+  // Detect lock status from URL parameter
+  const isLockParam = searchParams.get("isLock") === "1";
 
   // Check apakah kode rekening termasuk special
   const isSpecialKodeRekening = SPECIAL_KODE_REKENING.includes(
@@ -55,9 +60,14 @@ const Detail: NextPage = () => {
     await getDetailLtk(router, payload)
       .then((res) => {
         const dataResponse: LtkI[] = res.data.data;
-        if ((res.data as any).isLock) {
-          router.push(`./`);
-        }
+        const lockStatus = (res.data as any).isLock;
+        
+        console.log("🔒 Lock Status dari Backend LTK:", lockStatus);
+        console.log("🔒 Lock Status dari URL:", isLockParam);
+        
+        // Set lock state from backend or URL param
+        setIsLocked(lockStatus || isLockParam);
+        
         setDataSource(dataResponse);
         const dataEarlier: LtkI = dataResponse[0];
         setSelectedID(dataEarlier.id.toString());
@@ -524,6 +534,7 @@ const Detail: NextPage = () => {
                         onValueChange={(val: "0" | "1") =>
                           selectHandler(val, "mtd_ltk")
                         }
+                        disabled={isLocked}
                       >
                         <SelectTrigger
                           className={
@@ -564,7 +575,7 @@ const Detail: NextPage = () => {
                         w-full col-span-3 
                         ${
                           dataVerifications[indexSelected]
-                            ?.isMtdLtkVerifikasiSesuai === "1"
+                            ?.isMtdLtkVerifikasiSesuai === "1" || isLocked
                             ? "bg-secondary"
                             : ""
                         }
@@ -577,7 +588,7 @@ const Detail: NextPage = () => {
                       `}
                       readOnly={
                         dataVerifications[indexSelected]
-                          ?.isMtdLtkVerifikasiSesuai === "1"
+                          ?.isMtdLtkVerifikasiSesuai === "1" || isLocked
                       }
                       onChange={handleInput}
                     />
@@ -649,6 +660,7 @@ const Detail: NextPage = () => {
                         onValueChange={(val: "0" | "1") =>
                           selectHandler(val, "akuntansi")
                         }
+                        disabled={isLocked}
                       >
                         <SelectTrigger
                           className={
@@ -689,7 +701,7 @@ const Detail: NextPage = () => {
                         w-full col-span-3 
                         ${
                           dataVerifications[indexSelected]
-                            ?.isVerifikasiAkuntansiSesuai === "1"
+                            ?.isVerifikasiAkuntansiSesuai === "1" || isLocked
                             ? "bg-secondary"
                             : ""
                         }
@@ -702,7 +714,7 @@ const Detail: NextPage = () => {
                       `}
                       readOnly={
                         dataVerifications[indexSelected]
-                          ?.isVerifikasiAkuntansiSesuai === "1"
+                          ?.isVerifikasiAkuntansiSesuai === "1" || isLocked
                       }
                       onChange={handleInput}
                     />
@@ -740,6 +752,7 @@ const Detail: NextPage = () => {
                         onValueChange={(val: "0" | "1") =>
                           selectHandler(val, "pso")
                         }
+                        disabled={isLocked}
                       >
                         <SelectTrigger
                           className={
@@ -778,7 +791,7 @@ const Detail: NextPage = () => {
                         w-full col-span-3
                         ${
                           dataVerifications[indexSelected]
-                            ?.isVerifikasiPsoSesuai === "1"
+                            ?.isVerifikasiPsoSesuai === "1" || isLocked
                             ? "bg-secondary"
                             : ""
                         }
@@ -791,7 +804,7 @@ const Detail: NextPage = () => {
                       `}
                       readOnly={
                         dataVerifications[indexSelected]
-                          ?.isVerifikasiPsoSesuai === "1"
+                          ?.isVerifikasiPsoSesuai === "1" || isLocked
                       }
                       onChange={handleInput}
                     />
@@ -857,6 +870,7 @@ const Detail: NextPage = () => {
                   }
                   onChange={handleInput}
                   className="w-full col-span-3"
+                  disabled={isLocked}
                 />
               </div>
             </div>
@@ -877,12 +891,14 @@ const Detail: NextPage = () => {
           href={`./`}
           className={cn(buttonVariants({ variant: "outline" }))}
         >
-          Kembali
+          {isLocked ? 'Tutup' : 'Kembali'}
         </Link>
-        <Button className="text-white" onClick={onSubmitVerifikasi}>
-          {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
-          Simpan
-        </Button>
+        {!isLocked && (
+          <Button className="text-white" onClick={onSubmitVerifikasi}>
+            {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
+            Simpan
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -114,10 +114,9 @@ export const columns: ColumnDef<BiayaNppNasionalI>[] = [
       return (
         <div className="flex items-center gap-x-1">
           <Link
-            href={`./biaya-npp-nasional/${data.id}`}
+            href={`./biaya-npp-nasional/${data.id}${isLock ? '?isLock=1' : ''}`}
             className={cn(
-              buttonVariants({ size: "icon", variant: "outline" }),
-              isLock && "pointer-events-none opacity-50"
+              buttonVariants({ size: "icon", variant: "outline" })
             )}
           >
             <TableProperties />

@@ -1,7 +1,7 @@
 'use client'
 import { NextPage } from "next";
 import { getDetailNppNasional, postVerifikasiNppNasional } from "../../../../../services";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import { DownloadCloud, Loader2 } from "lucide-react";
 
 const Detail: NextPage = () => {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const params = useParams<{ id_npp: string }>()
     const [Datasource, setDataSource] = useState<Array<NppI>>([])
     const [selectedID, setSelectedID] = useState<string>('')
@@ -28,6 +29,10 @@ const Detail: NextPage = () => {
     const [dataVerifications, setDataVerifications] = useState<Array<IFormNppVerifikasi>>([])
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [isLocked, setIsLocked] = useState<boolean>(false)
+
+    // Detect lock status from URL parameter
+    const isLockParam = searchParams.get("isLock") === "1"
 
     const firstInit = async () => {
         const payload = `?id_npp=${params.id_npp}`
@@ -35,9 +40,14 @@ const Detail: NextPage = () => {
         await getDetailNppNasional(router, payload)
             .then((res) => {
                 const dataResponse: NppI[] = res.data.data
-                if (((res.data as any).isLock)) {
-                    router.push(`./`)
-                }
+                const lockStatus = ((res.data as any).isLock)
+                
+                console.log("🔒 Lock Status dari Backend NPP:", lockStatus)
+                console.log("🔒 Lock Status dari URL:", isLockParam)
+                
+                // Set lock state from backend or URL param
+                setIsLocked(lockStatus || isLockParam)
+                
                 setDataSource(dataResponse)
                 const dataEarlier: NppI = dataResponse[0]
                 setSelectedID(dataEarlier.id.toString())
@@ -221,6 +231,7 @@ const Detail: NextPage = () => {
                                     <Select
                                         value={dataVerifications[indexSelected]?.isVerifikasiSesuai}
                                         onValueChange={selectHandler}
+                                        disabled={isLocked}
                                     >
                                         <SelectTrigger
                                             className={!dataVerifications[indexSelected]?.isVerifikasiSesuai ? 'border-red-600' : ''}
@@ -248,10 +259,10 @@ const Detail: NextPage = () => {
                                     name="verifikasi"
                                     className={`
                                         w-full col-span-3 
-                                        ${dataVerifications[indexSelected]?.isVerifikasiSesuai === "1" || dataVerifications[indexSelected]?.isVerifikasiSesuai === "" ? "bg-secondary" : ''}
+                                        ${dataVerifications[indexSelected]?.isVerifikasiSesuai === "1" || dataVerifications[indexSelected]?.isVerifikasiSesuai === "" || isLocked ? "bg-secondary" : ''}
                                         ${dataVerifications[indexSelected]?.verifikasi === "" ? 'border-red-600' : ''}
                                     `}
-                                    readOnly={dataVerifications[indexSelected]?.isVerifikasiSesuai === "1" || dataVerifications[indexSelected]?.isVerifikasiSesuai === ""}
+                                    readOnly={dataVerifications[indexSelected]?.isVerifikasiSesuai === "1" || dataVerifications[indexSelected]?.isVerifikasiSesuai === "" || isLocked}
                                     onChange={handleInput}
                                 />
                             </div>
@@ -262,6 +273,7 @@ const Detail: NextPage = () => {
                                     value={dataVerifications[indexSelected]?.catatan_pemeriksa || ""}
                                     onChange={handleInput}
                                     className="w-full col-span-3"
+                                    disabled={isLocked}
                                 />
                             </div>
 
@@ -296,14 +308,16 @@ const Detail: NextPage = () => {
                         buttonVariants({ variant: 'outline' })
                     )}
                 >
-                    Kembali
+                    {isLocked ? 'Tutup' : 'Kembali'}
                 </Link>
-                <Button className="text-white" onClick={onSubmitVerifikasi}>
-                    {isSubmitting && (
-                        <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />
-                    )}
-                    Simpan
-                </Button>
+                {!isLocked && (
+                    <Button className="text-white" onClick={onSubmitVerifikasi}>
+                        {isSubmitting && (
+                            <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />
+                        )}
+                        Simpan
+                    </Button>
+                )}
             </div>
         </div>
     )
