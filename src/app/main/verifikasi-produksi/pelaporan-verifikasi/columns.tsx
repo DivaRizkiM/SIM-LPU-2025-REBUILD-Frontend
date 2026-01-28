@@ -41,6 +41,16 @@ export interface VerifikasiAtribusiI {
 
 const columnHelper = createColumnHelper<VerifikasiAtribusiI>();
 
+// Helper untuk membandingkan nilai currency
+const cleanCurrencyValue = (v?: string) => {
+  if (!v) return "0";
+  return v.replace(/[^0-9]/g, "");
+};
+
+const isSameAmount = (pelaporan?: string, verifikasi?: string) => {
+  return cleanCurrencyValue(pelaporan) === cleanCurrencyValue(verifikasi);
+};
+
 const generateColumnGroup = (monthIndex: number) => {
   return columnHelper.group({
     id: `laporan${monthIndex}`,
@@ -54,9 +64,17 @@ const generateColumnGroup = (monthIndex: number) => {
         header: "Pelaporan",
         cell: (row) => {
           const data = row.row.original;
+          const item = data.laporan[monthIndex - 1];
+          const isSame = isSameAmount(item.pelaporan, item.verifikasi);
           return (
-            <div className="text-nowrap">
-              {data.laporan[monthIndex - 1].pelaporan}
+            <div 
+              className={`text-nowrap font-semibold px-2 py-1 rounded ${
+                isSame 
+                  ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950" 
+                  : "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950"
+              }`}
+            >
+              {item.pelaporan}
             </div>
           );
         },
@@ -65,9 +83,17 @@ const generateColumnGroup = (monthIndex: number) => {
         header: "Verifikasi",
         cell: (row) => {
           const data = row.row.original;
+          const item = data.laporan[monthIndex - 1];
+          const isSame = isSameAmount(item.pelaporan, item.verifikasi);
           return (
-            <div className="text-nowrap">
-              {data.laporan[monthIndex - 1].verifikasi}
+            <div 
+              className={`text-nowrap font-semibold px-2 py-1 rounded ${
+                isSame 
+                  ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950" 
+                  : "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950"
+              }`}
+            >
+              {item.verifikasi}
             </div>
           );
         },
@@ -86,18 +112,13 @@ const generateColumnGroup = (monthIndex: number) => {
               <button
                 onClick={() =>
                   meta.onClickEditData(
-                    data.laporan[monthIndex - 1].id_produksi_detail
+                    data.laporan[monthIndex - 1].id_produksi_detail,
+                    isLock
                   )
                 }
-                disabled={isLock}
-                className={`flex items-center text-sm text-blue-600 hover:underline ${
-                  isLock ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className="flex items-center text-sm text-blue-600 hover:underline"
               >
                 <FilePenIcon className="w-4 h-4 me-1" />
-                {isLock && (
-                  <Lock className="ms-1 w-[10px] h-[10px] text-red-800" />
-                )}
               </button>
 
               {isLock ? (

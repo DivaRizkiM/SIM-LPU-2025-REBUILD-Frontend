@@ -52,6 +52,7 @@ const Detail: NextPage = () => {
   const kode_rek = searchParams.get("kode_rek");
   const id_kcu = searchParams.get("id_kcu");
   const kcp_id = searchParams.get("kpc_id");
+  const isLockParam = searchParams.get("isLock") === "1"; // Ambil status lock dari URL
   const [Datasource, setDataSource] = useState<Array<BiayaRutinDetailI>>([]);
   const [selectedID, setSelectedID] = useState<string>("");
   const [indexSelected, setIndexSelected] = useState<number>(0);
@@ -62,6 +63,7 @@ const Detail: NextPage = () => {
   >([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(isLockParam); // State untuk mode locked
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isLTK = String(selectedData?.kode_rekening ?? "") === "5000000010";
@@ -142,13 +144,14 @@ const Detail: NextPage = () => {
     await getDetailBiayaRutin(router, params)
       .then((res) => {
         const dataResponse: BiayaRutinDetailI[] = res.data.data;
-        if ((res.data as any).isLock) {
-          router.push(
-            `./pelaporan-verifikasi?br_id=${br_id}&kcu_id=${id_kcu}&kcp_id=${kcp_id}&triwulan=${getQuarter(
-              parseInt(bulan || "")
-            )}&tahun=${tahun}`
-          );
-        }
+        const lockStatus = (res.data as any).isLock;
+        
+        console.log("🔒 Lock Status dari Backend:", lockStatus);
+        console.log("🔗 isLock dari URL:", isLockParam);
+        
+        // Set locked status dari backend atau parameter URL
+        // Tidak perlu redirect, biarkan user masuk tapi field akan disabled jika locked
+        setIsLocked(lockStatus || isLockParam);
         setDataSource(dataResponse);
         const dataEarlier: BiayaRutinDetailI = dataResponse[0];
         setSelectedID(dataEarlier.id_verifikasi_biaya_rutin_detail);
@@ -427,7 +430,7 @@ const Detail: NextPage = () => {
         </div>
       )}
       <h3 className="scroll-m-20 text-xl font-semibold tracking-tight mb-3 border-b pb-2">
-        VERIFIKASI BIAYA RUTIN - DETAIL
+        VERIFIKASI BIAYA RUTIN - DETAIL {isLocked && <span className="text-red-600">(MODE LIHAT - TERKUNCI)</span>}
       </h3>
       <div className="flex space-x-2 h-full">
         <ul className="relative space-y-2 text-center w-14  md:w-16 max-h-svh overflow-y-scroll z-20">
@@ -532,6 +535,7 @@ const Detail: NextPage = () => {
                           dataVerifications[indexSelected]?.isVerifikasiSesuai
                         }
                         onValueChange={selectHandler}
+                        disabled={isLocked}
                       >
                         <SelectTrigger
                           className={
@@ -560,25 +564,28 @@ const Detail: NextPage = () => {
                       )}
                     </div>
                     <CurrencyInput
-                      value={dataVerifications[indexSelected]?.verifikasi}
+                      value={dataVerifications[indexSelected]?.verifikasi || ""}
                       name="verifikasi"
                       className={`
-                                        w-full col-span-3 ${
+                                        w-full col-span-3 
+                                        ${
                                           dataVerifications[indexSelected]
                                             ?.isVerifikasiSesuai === "1" ||
                                           dataVerifications[indexSelected]
-                                            ?.isVerifikasiSesuai === ""
+                                            ?.isVerifikasiSesuai === "" ||
+                                          isLocked
                                             ? "bg-secondary"
                                             : ""
                                         }
                                         ${
                                           dataVerifications[indexSelected]
-                                            ?.verifikasi === ""
+                                            ?.verifikasi === "" && !isLocked
                                             ? "border-red-600"
                                             : ""
                                         }
                                     `}
                       readOnly={
+                        isLocked ||
                         dataVerifications[indexSelected]?.isVerifikasiSesuai ===
                           "1" ||
                         dataVerifications[indexSelected]?.isVerifikasiSesuai ===
@@ -612,7 +619,8 @@ const Detail: NextPage = () => {
                           : selectedData?.verifikasi || "")
                       }
                       name="verifikasi"
-                      className="w-full col-span-3"
+                      className={`w-full col-span-3 ${isLocked ? 'bg-secondary' : ''}`}
+                      readOnly={isLocked}
                       onChange={handleInput}
                     />
                   </div>
@@ -627,7 +635,8 @@ const Detail: NextPage = () => {
                     dataVerifications[indexSelected]?.catatan_pemeriksa || ""
                   }
                   onChange={handleInput}
-                  className="w-full col-span-3"
+                  className={`w-full col-span-3 ${isLocked ? 'bg-secondary' : ''}`}
+                  readOnly={isLocked}
                 />
               </div>
             </div>
@@ -695,10 +704,12 @@ const Detail: NextPage = () => {
         >
           Kembali
         </Link>
-        <Button className="text-white" onClick={onSubmitVerifikasi}>
-          {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
-          Simpan
-        </Button>
+        {!isLocked && (
+          <Button className="text-white" onClick={onSubmitVerifikasi}>
+            {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
+            Simpan
+          </Button>
+        )}
       </div>
     </div>
   );

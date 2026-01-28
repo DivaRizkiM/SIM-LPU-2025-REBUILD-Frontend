@@ -30,6 +30,16 @@ const columnHelper = createColumnHelper<VerifikasiAtribusiI>();
 // Rp. 0 atau Rp. 0,00 (dengan/ tanpa spasi)
 const isZeroRupiah = (v?: string) => /^Rp\.\s?0(,00)?$/.test(v ?? "");
 
+// Helper untuk membandingkan nilai currency
+const cleanCurrencyValue = (v?: string) => {
+  if (!v) return "0";
+  return v.replace(/[^0-9]/g, "");
+};
+
+const isSameAmount = (pelaporan?: string, verifikasi?: string) => {
+  return cleanCurrencyValue(pelaporan) === cleanCurrencyValue(verifikasi);
+};
+
 const generateColumnGroup = (monthIndex: number) =>
   columnHelper.group({
     id: `laporan${monthIndex}`,
@@ -43,14 +53,36 @@ const generateColumnGroup = (monthIndex: number) =>
         header: "Pelaporan",
         cell: (ctx) => {
           const item = ctx.row.original.laporan[monthIndex - 1];
-          return <div className="text-nowrap">{item.pelaporan}</div>;
+          const isSame = isSameAmount(item.pelaporan, item.verifikasi);
+          return (
+            <div 
+              className={`text-nowrap font-semibold px-2 py-1 rounded ${
+                isSame 
+                  ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950" 
+                  : "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950"
+              }`}
+            >
+              {item.pelaporan}
+            </div>
+          );
         },
       },
       {
         header: "Verifikasi",
         cell: (ctx) => {
           const item = ctx.row.original.laporan[monthIndex - 1];
-          return <div className="text-nowrap">{item.verifikasi}</div>;
+          const isSame = isSameAmount(item.pelaporan, item.verifikasi);
+          return (
+            <div 
+              className={`text-nowrap font-semibold px-2 py-1 rounded ${
+                isSame 
+                  ? "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950" 
+                  : "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-950"
+              }`}
+            >
+              {item.verifikasi}
+            </div>
+          );
         },
       },
       {
@@ -66,13 +98,13 @@ const generateColumnGroup = (monthIndex: number) =>
 
           const hasLampiran = item?.lampiran === "Y" && !!item?.url_lampiran;
 
-          const canEdit = !isLock && !isZero;
+          const canView = !isZero; // Bisa lihat detail selama bukan Rp 0
           const canDownload = hasLampiran && !isLock && !isZero;
 
-          const editTooltip = isLock
-            ? "Akses edit terkunci"
-            : isZero
-            ? "Nilai Rp 0, tidak ada yang bisa diedit"
+          const editTooltip = isZero
+            ? "Nilai Rp 0, tidak ada yang bisa dilihat"
+            : isLock
+            ? "Lihat detail (mode terkunci)"
             : "Edit";
           const dlTooltip = !hasLampiran
             ? "Tidak ada lampiran"
@@ -84,12 +116,12 @@ const generateColumnGroup = (monthIndex: number) =>
 
           return (
             <div className="flex items-center justify-center gap-x-2">
-              {/* EDIT */}
-              {canEdit ? (
+              {/* EDIT/VIEW */}
+              {canView ? (
                 <Link
-                  href={`./detail?ba_id=${meta.ba_id}&bulan=${item.bulan}&kode_rek=${data.kode_rekening}&id_kcu=${meta.kcu_id}&tahun=${meta.tahun}`}
+                  href={`./detail?ba_id=${meta.ba_id}&bulan=${item.bulan}&kode_rek=${data.kode_rekening}&id_kcu=${meta.kcu_id}&tahun=${meta.tahun}&isLock=${isLock ? '1' : '0'}`}
                   className="flex items-center text-sm text-blue-600 hover:underline"
-                  aria-label="Edit"
+                  aria-label={isLock ? "Lihat Detail" : "Edit"}
                 >
                   <FilePenIcon className="me-1 h-4 w-4" />
                 </Link>
