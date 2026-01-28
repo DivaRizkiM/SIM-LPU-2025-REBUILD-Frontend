@@ -231,9 +231,8 @@ export const columns: ColumnDef<BiayaLtkI>[] = [
       return (
         <div className="flex items-center justify-center gap-x-1">
           <Link
-            href={`./biaya-ltk/${data.id}`}
-            className={`flex items-center text-blue-600 hover:underline text-sm ${isLock ? "pointer-events-none opacity-50" : ""
-              }`}
+            href={`./biaya-ltk/${data.id}${isLock ? '?isLock=1' : ''}`}
+            className="flex items-center text-blue-600 hover:underline text-sm"
           >
             <FilePenIcon className="w-4 h-4 me-1" />
  
