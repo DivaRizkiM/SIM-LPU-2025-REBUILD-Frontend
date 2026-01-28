@@ -105,15 +105,16 @@ export function DataTable<TData, TValue>({
       }
     }
   
-  const onClickEditData = (id_produksi_detail:number|string)=>{
+  const onClickEditData = (id_produksi_detail:number|string, isLock = false)=>{
     ctx.dispatch({
       isModal: {
-        title: 'VERIFIKASI PRODUKSI - DETAIL',
+        title: isLock ? 'VERIFIKASI PRODUKSI - DETAIL (MODE LIHAT - TERKUNCI)' : 'VERIFIKASI PRODUKSI - DETAIL',
         type: "modal",
         component: 
           <Detail 
             trigger={mutate} 
             id_produksi_detail={id_produksi_detail}
+            isLock={isLock}
           />
       }
     })

@@ -36,9 +36,10 @@ import { Loader2 } from "lucide-react";
 interface IDetailVerifProduksi {
   id_produksi_detail: string | number;
   trigger: any;
+  isLock?: boolean;
 }
 
-const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
+const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger, isLock = false }) => {
   const router = useRouter();
   const [Datasource, setDataSource] = useState<
     Array<VerifikasiProduksiDetailI>
@@ -52,6 +53,7 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
   >([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(isLock); // State untuk mode locked
   const containerRef = useRef<HTMLDivElement>(null);
   const ctx = context();
 
@@ -62,9 +64,15 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
     await getDetailVerifikasiProduksi(router, params)
       .then((res) => {
         const dataResponse: VerifikasiProduksiDetailI[] = res.data.data;
-        if ((res.data as any).isLock) {
-          ctx.dispatch({ isModal: undefined });
+        const lockStatus = (res.data as any).isLock;
+        
+        // Jika locked dan TIDAK dalam mode view (isLock prop = false), close modal
+        // Tapi jika dalam mode view (isLock prop = true), tetap tampilkan
+        if (lockStatus && !isLock) {
+          return ctx.dispatch({ isModal: undefined });
         }
+        
+        setIsLocked(lockStatus || isLock);
         setDataSource(dataResponse);
         const dataEarlier: VerifikasiProduksiDetailI = dataResponse[0];
         setSelectedID(dataEarlier.id_produksi_detail);
@@ -275,6 +283,7 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
                 <Select
                   value={dataVerifications[indexSelected]?.isVerifikasiSesuai}
                   onValueChange={selectHandler}
+                  disabled={isLocked}
                 >
                   <SelectTrigger
                     className={
@@ -302,7 +311,7 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
                 )}
               </div>
               <CurrencyInput
-                value={dataVerifications[indexSelected]?.verifikasi}
+                value={dataVerifications[indexSelected]?.verifikasi || ""}
                 name="verifikasi"
                 className={`
                                     w-full col-span-3 
@@ -310,18 +319,20 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
                                       dataVerifications[indexSelected]
                                         ?.isVerifikasiSesuai === "1" ||
                                       dataVerifications[indexSelected]
-                                        ?.isVerifikasiSesuai === ""
+                                        ?.isVerifikasiSesuai === "" ||
+                                      isLocked
                                         ? "bg-secondary"
                                         : ""
                                     }
                                     ${
                                       dataVerifications[indexSelected]
-                                        ?.verifikasi === ""
+                                        ?.verifikasi === "" && !isLocked
                                         ? "border-red-600"
                                         : ""
                                     }
                                 `}
                 readOnly={
+                  isLocked ||
                   dataVerifications[indexSelected]?.isVerifikasiSesuai ===
                     "1" ||
                   dataVerifications[indexSelected]?.isVerifikasiSesuai === ""
@@ -337,7 +348,8 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
                   dataVerifications[indexSelected]?.catatan_pemeriksa || ""
                 }
                 onChange={handleInput}
-                className="w-full col-span-3"
+                className={`w-full col-span-3 ${isLocked ? 'bg-secondary' : ''}`}
+                readOnly={isLocked}
               />
             </div>
           </div>
@@ -348,12 +360,14 @@ const Detail: FC<IDetailVerifProduksi> = ({ id_produksi_detail, trigger }) => {
           variant={"outline"}
           onClick={() => ctx.dispatch({ isModal: undefined })}
         >
-          Kembali
+          {isLocked ? "Tutup" : "Kembali"}
         </Button>
-        <Button className="text-white" onClick={onSubmitVerifikasi}>
-          {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
-          Simpan
-        </Button>
+        {!isLocked && (
+          <Button className="text-white" onClick={onSubmitVerifikasi}>
+            {isSubmitting && <ReloadIcon className="mr-2 h-3 w-3 animate-spin" />}
+            Simpan
+          </Button>
+        )}
       </div>
     </div>
   );
